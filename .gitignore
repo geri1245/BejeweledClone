@@ -1,0 +1,7 @@
+.vs
+MiniclipProject/x64
+x86
+x64/Debug/MiniclipProject.exe
+x64/Debug/MiniclipProject.pdb
+SDL*/docs
+SDL*/cmake
