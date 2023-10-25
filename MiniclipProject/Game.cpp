@@ -19,14 +19,26 @@ Game::Game()
 
 void Game::RunMainLoop()
 {
+    auto previous = SDL_GetTicks64();
+
     while (!_shouldQuit) {
+        auto now = SDL_GetTicks64();
+
+        // Don't limit the user input processing frequency
         ProcessEvents();
 
-        _screen->BeginFrame();
+        _gameWorld->Update(now);
 
-        _gameWorld->Draw();
+        // Limit the display rate at 120 Hz
+        if (now - previous >= FrameTime) {
+            _screen->BeginFrame();
 
-        _screen->Present();
+            _gameWorld->Draw();
+
+            _screen->Present();
+
+            previous = SDL_GetTicks64();
+        }
     }
 }
 

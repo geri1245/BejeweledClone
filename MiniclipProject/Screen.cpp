@@ -35,11 +35,27 @@ bool Screen::Initialize()
         return false;
     }
 
-    _screenSurface = SDL_GetWindowSurface(_window);
-    if (!_screenSurface) {
-        std::cerr << "Screen surface could not be created! SDL_Error: " << SDL_GetError() << std::endl;
+    //_screenSurface = SDL_GetWindowSurface(_window);
+    // if (!_screenSurface) {
+    //    std::cerr << "Screen surface could not be created! SDL_Error: " << SDL_GetError() << std::endl;
+    //    return false;
+    //}
+
+    _renderer = SDL_CreateRenderer(_window, -1, 0);
+    if (!_renderer) {
+        std::cerr << "SDL renderer could not be created! SDL_Error: " << SDL_GetError() << std::endl;
         return false;
     }
+
+    //_renderTarget = SDL_CreateTexture(_renderer, SDL_PIXELFORMAT_RGBA8888, SDL_TEXTUREACCESS_TARGET, ScreenWidth, ScreenHeight);
+    // if (!_renderTarget) {
+    //    std::cerr << "SDL render target could not be created! SDL_Error: " << SDL_GetError() << std::endl;
+    //    return false;
+    //}
+
+    // SDL_SetRenderTarget(_renderer, _renderTarget);
+
+    SDL_SetRenderDrawColor(_renderer, 255, 0, 0, 255);
 
     return true;
 }
@@ -71,27 +87,36 @@ std::unique_ptr<Screen> Screen::GetScreen()
 
 Screen::~Screen()
 {
+    SDL_DestroyRenderer(_renderer);
+
+    for (auto* texture : _assetImages) {
+        SDL_DestroyTexture(texture);
+    }
+
     SDL_DestroyWindow(_window);
     SDL_Quit();
 }
 
 void Screen::BeginFrame()
 {
-    SDL_FillRect(_screenSurface, nullptr, SDL_MapRGB(_screenSurface->format, 255, 255, 255));
+    SDL_RenderClear(_renderer);
+    // SDL_FillRect(_screenSurface, nullptr, SDL_MapRGB(_screenSurface->format, 255, 255, 255));
 }
 
-void Screen::DrawCell(int xCoord, int yCoord, int cellType, int cellSize)
+void Screen::DrawCell(Point coords, int cellType, int cellSize)
 {
-    SDL_Rect rect { xCoord, yCoord, cellSize, cellSize };
-    SDL_BlitSurface(_assetImages[cellType], nullptr, _screenSurface, &rect);
+    SDL_Rect srcRect { 0, 0, cellSize, cellSize };
+    SDL_Rect dstRect { coords.x, coords.y, cellSize, cellSize };
+    // SDL_BlitSurface(_assetImages[cellType], nullptr, _screenSurface, &rect);
+    SDL_RenderCopy(_renderer, _assetImages[cellType], &srcRect, &dstRect);
 }
 
 void Screen::Present()
 {
-    SDL_UpdateWindowSurface(_window);
+    SDL_RenderPresent(_renderer);
 }
 
-SDL_Surface* Screen::LoadImage(const std::string& filePath)
+SDL_Texture* Screen::LoadImage(const std::string& filePath)
 {
     // Load image at specified path
     SDL_Surface* loadedSurface = IMG_Load(filePath.c_str());
@@ -100,13 +125,13 @@ SDL_Surface* Screen::LoadImage(const std::string& filePath)
         return nullptr;
     }
 
-    SDL_Surface* optimizedSurface = SDL_ConvertSurface(loadedSurface, _screenSurface->format, 0);
+    SDL_Texture* texture = SDL_CreateTextureFromSurface(_renderer, loadedSurface);
     SDL_FreeSurface(loadedSurface);
 
-    if (!optimizedSurface) {
+    if (!texture) {
         std::cerr << "Failed to convert surface to the requested format! SDL_Error: " << SDL_GetError() << std::endl;
         return nullptr;
     }
 
-    return optimizedSurface;
+    return texture;
 }

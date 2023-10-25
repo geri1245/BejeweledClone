@@ -11,6 +11,8 @@ public:
     void RunMainLoop();
 
 private:
+    static constexpr int FrameTime = int(1000.f / 120);
+
     std::unique_ptr<Screen> _screen;
     std::unique_ptr<InputProcessor> _inputProcessor;
     std::unique_ptr<GameWorld> _gameWorld;

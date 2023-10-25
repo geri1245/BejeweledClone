@@ -7,6 +7,11 @@ int DistanceSquared(const Point& lhs, const Point& rhs)
     return int(std::pow(lhs.x - rhs.x, 2)) + int(std::pow(lhs.y - rhs.y, 2));
 }
 
+Point Lerp(const Point& lhs, const Point& rhs, double progress)
+{
+    return Point { int(std::lerp(lhs.x, rhs.x, progress)), int(std::lerp(lhs.y, rhs.y, progress)) };
+}
+
 Point operator+(const Point& lhs, const Point& rhs)
 {
     return Point { lhs.x + rhs.x, lhs.y + rhs.y };

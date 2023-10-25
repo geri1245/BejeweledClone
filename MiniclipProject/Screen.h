@@ -3,8 +3,12 @@
 #include <SDL.h>
 
 #include <memory>
+#include <optional>
 #include <string>
+#include <unordered_map>
 #include <vector>
+
+#include "Point.h"
 
 class Screen {
 public:
@@ -12,7 +16,7 @@ public:
     ~Screen();
 
     void BeginFrame();
-    void DrawCell(int row, int col, int cellType, int cellSize);
+    void DrawCell(Point coords, int cellType, int cellSize);
     void Present();
 
 private:
@@ -21,11 +25,14 @@ private:
 
     static constexpr int ScreenWidth = 560;
     static constexpr int ScreenHeight = 560;
+    static constexpr int AnimationTime = 5000;
 
     SDL_Window* _window = nullptr;
     SDL_Surface* _screenSurface = nullptr;
+    SDL_Renderer* _renderer = nullptr;
+    SDL_Texture* _renderTarget = nullptr;
 
-    std::vector<SDL_Surface*> _assetImages;
+    std::vector<SDL_Texture*> _assetImages;
 
-    SDL_Surface* LoadImage(const std::string& filePath);
+    SDL_Texture* LoadImage(const std::string& filePath);
 };
