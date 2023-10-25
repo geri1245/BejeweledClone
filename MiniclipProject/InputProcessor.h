@@ -1,7 +1,7 @@
 #pragma once
 
 #include "Event.h"
-#include "Point.h"
+#include "Vec2.h"
 
 #include <SDL.h>
 
@@ -16,14 +16,14 @@ public:
     void ProcessKeyEvent(const SDL_Event& keyEvent);
     void ProcessMouseEvent(const SDL_Event& mouseEvent);
 
-    Event<std::function<void(Point position)>> MouseDragStarted;
-    Event<std::function<void(Point position)>> MouseDragMoved;
-    Event<std::function<void(Point position)>> MouseDragEnded;
-    Event<std::function<void(Point position)>> MouseClicked;
+    Event<std::function<void(Vec2 position)>> MouseDragStarted;
+    Event<std::function<void(Vec2 position)>> MouseDragMoved;
+    Event<std::function<void(Vec2 position)>> MouseDragEnded;
+    Event<std::function<void(Vec2 position)>> MouseClicked;
 
     Event<std::function<void(Key key)>> KeyPressed;
 
 private:
     bool _isDragging = false;
-    std::optional<Point> _mouseDragStartPosition;
+    std::optional<Vec2> _mouseDragStartPosition;
 };

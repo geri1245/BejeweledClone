@@ -8,7 +8,7 @@
 #include <unordered_map>
 #include <vector>
 
-#include "Point.h"
+#include "Vec2.h"
 
 class Screen {
 public:
@@ -16,7 +16,7 @@ public:
     ~Screen();
 
     void BeginFrame();
-    void DrawCell(Point coords, int cellType, int cellSize);
+    void DrawCell(Vec2 coords, int cellType, int cellSize);
     void Present();
 
 private:

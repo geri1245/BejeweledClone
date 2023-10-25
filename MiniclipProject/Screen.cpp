@@ -103,7 +103,7 @@ void Screen::BeginFrame()
     // SDL_FillRect(_screenSurface, nullptr, SDL_MapRGB(_screenSurface->format, 255, 255, 255));
 }
 
-void Screen::DrawCell(Point coords, int cellType, int cellSize)
+void Screen::DrawCell(Vec2 coords, int cellType, int cellSize)
 {
     SDL_Rect srcRect { 0, 0, cellSize, cellSize };
     SDL_Rect dstRect { coords.x, coords.y, cellSize, cellSize };

@@ -1,8 +1,8 @@
 #pragma once
 
 #include "Event.h"
-#include "Point.h"
 #include "Screen.h"
+#include "Vec2.h"
 
 #include <optional>
 #include <random>
@@ -37,16 +37,16 @@ public:
     void Update(uint64_t now);
     bool IsInteractionEnabled() const;
 
-    void SetActiveCell(std::optional<Point> index, Point offset = Point { 0, 0 });
+    void SetActiveCell(std::optional<Vec2> index, Vec2 offset = Vec2 { 0, 0 });
 
-    void TrySwitchCells(Point lhs, Point rhs);
+    void TrySwitchCells(Vec2 lhs, Vec2 rhs);
 
-    std::optional<Point> GetTileIndicesAtPoint(Point position);
+    std::optional<Vec2> GetTileIndicesAtPoint(Vec2 position);
 
 private:
     struct CellMoveData {
-        Point StartingPosition;
-        Point FinalPosition;
+        Vec2 StartingPosition;
+        Vec2 FinalPosition;
         int CellType;
     };
 
@@ -60,8 +60,8 @@ private:
     };
 
     struct ActiveCellState {
-        Point Index;
-        Point Offset;
+        Vec2 Index;
+        Vec2 Offset;
         uint64_t AnimationStartTime = 0;
     };
 
@@ -70,13 +70,13 @@ private:
     static constexpr double CellDestroyAnimationDurationMs = 1000.0;
     static constexpr double CellFallAnimationDurationMs = 800.0;
 
-    Cell& At(Point indices);
-    const Cell& At(Point indices) const;
+    Cell& At(Vec2 indices);
+    const Cell& At(Vec2 indices) const;
 
     Cell GetRandomCell();
     void UpdateBoardState();
     void MoveCellsAnimated(std::vector<CellMoveData>&& moveData, double animationTime, std::function<void()> completion);
-    void DestroyCellsAnimated(std::vector<Point>&& cellsToDestroy, double animationTime, std::function<void()> completion);
+    void DestroyCellsAnimated(std::vector<Vec2>&& cellsToDestroy, double animationTime, std::function<void()> completion);
     void MoveDownCells();
 
     GameBoard _gameBoard;

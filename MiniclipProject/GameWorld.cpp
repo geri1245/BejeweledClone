@@ -35,7 +35,7 @@ void GameWorld::Draw()
         auto& currentRow = _gameBoard[i];
         for (int j = 0; j < currentRow.size(); ++j) {
             if (_gameBoard[i][j].State == Cell::CellState::Normal) {
-                _screen->DrawCell(Point { i * TileSize, j * TileSize }, _gameBoard[i][j].Type, TileSize);
+                _screen->DrawCell(Vec2 { i * TileSize, j * TileSize }, _gameBoard[i][j].Type, TileSize);
             }
         }
     }
@@ -49,14 +49,14 @@ void GameWorld::Draw()
         auto halfDiff = int((newSize - TileSize) / 2.0);
 
         _screen->DrawCell(
-            _activeCellState->Index * TileSize - Point { halfDiff, halfDiff } + _activeCellState->Offset,
+            _activeCellState->Index * TileSize - Vec2 { halfDiff, halfDiff } + _activeCellState->Offset,
             At(_activeCellState->Index).Type,
             int(newSize));
     }
 
     if (_animationState) {
         for (const auto& [startPosition, endPosition, cellType] : _animationState->AnimationData) {
-            _screen->DrawCell(Lerp(startPosition, endPosition, _animationState->AnimationProgress), cellType, TileSize);
+            _screen->DrawCell(startPosition.Lerp(endPosition, _animationState->AnimationProgress), cellType, TileSize);
         }
     }
 }
@@ -89,14 +89,14 @@ bool GameWorld::IsInteractionEnabled() const
     return !_animationState.has_value();
 }
 
-void GameWorld::SetActiveCell(std::optional<Point> index, Point offset)
+void GameWorld::SetActiveCell(std::optional<Vec2> index, Vec2 offset)
 {
     if (index) {
         if (_activeCellState && _activeCellState->Index == index) {
-            _activeCellState->Offset = offset;
+            _activeCellState->Offset = offset.KeepGreaterComponent();
         } else {
             _activeCellState.emplace(
-                *index, offset, SDL_GetTicks64());
+                *index, offset.KeepGreaterComponent(), SDL_GetTicks64());
             At(*index).State = Cell::CellState::Active;
         }
     } else {
@@ -107,14 +107,14 @@ void GameWorld::SetActiveCell(std::optional<Point> index, Point offset)
     }
 }
 
-void GameWorld::TrySwitchCells(Point lhs, Point rhs)
+void GameWorld::TrySwitchCells(Vec2 lhs, Vec2 rhs)
 {
     assert(lhs.x >= 0 && lhs.x < RowCount);
     assert(lhs.y >= 0 && lhs.y < ColCount);
     assert(rhs.x >= 0 && rhs.x < RowCount);
     assert(rhs.y >= 0 && rhs.y < ColCount);
 
-    if (DistanceSquared(lhs, rhs) == 1) {
+    if (lhs.DistanceSquared(rhs) == 1) {
         MoveCellsAnimated(
             {
                 CellMoveData { lhs, rhs, At(lhs).Type },
@@ -124,9 +124,9 @@ void GameWorld::TrySwitchCells(Point lhs, Point rhs)
     }
 }
 
-std::optional<Point> GameWorld::GetTileIndicesAtPoint(Point position)
+std::optional<Vec2> GameWorld::GetTileIndicesAtPoint(Vec2 position)
 {
-    Point possibleResult = position / TileSize;
+    Vec2 possibleResult = position / TileSize;
     if (possibleResult.x >= 0 && possibleResult.x < RowCount && possibleResult.y >= 0 && possibleResult.y < ColCount) {
         return possibleResult;
     }
@@ -134,7 +134,7 @@ std::optional<Point> GameWorld::GetTileIndicesAtPoint(Point position)
     return std::nullopt;
 }
 
-Cell& GameWorld::At(Point indices)
+Cell& GameWorld::At(Vec2 indices)
 {
     assert(indices.x >= 0 && indices.x < ColCount);
     assert(indices.y >= 0 && indices.y < RowCount);
@@ -142,7 +142,7 @@ Cell& GameWorld::At(Point indices)
     return _gameBoard[indices.x][indices.y];
 }
 
-const Cell& GameWorld::At(Point indices) const
+const Cell& GameWorld::At(Vec2 indices) const
 {
     assert(indices.x >= 0 && indices.x < ColCount);
     assert(indices.y >= 0 && indices.y < RowCount);
@@ -157,7 +157,7 @@ Cell GameWorld::GetRandomCell()
 
 void GameWorld::UpdateBoardState()
 {
-    std::vector<Point> cellsToRemove;
+    std::vector<Vec2> cellsToRemove;
 
     // Check the rows for at least 3 of the same cells next to each other
     for (int i = 0; i < RowCount; ++i) {
@@ -173,7 +173,7 @@ void GameWorld::UpdateBoardState()
             // Check if we have at least 3 of the same cell types next to each other
             if (k - j > 2) {
                 for (int copyInd = j; copyInd < k; ++copyInd) {
-                    cellsToRemove.push_back(Point { i, copyInd });
+                    cellsToRemove.push_back(Vec2 { i, copyInd });
                 }
             }
 
@@ -193,7 +193,7 @@ void GameWorld::UpdateBoardState()
 
             if (k - i > 2) {
                 for (int copyInd = i; copyInd < k; ++copyInd) {
-                    cellsToRemove.push_back(Point { copyInd, j });
+                    cellsToRemove.push_back(Vec2 { copyInd, j });
                 }
             }
 
@@ -202,7 +202,7 @@ void GameWorld::UpdateBoardState()
     }
 
     if (!cellsToRemove.empty()) {
-        std::sort(cellsToRemove.begin(), cellsToRemove.end(), std::greater<Point>());
+        std::sort(cellsToRemove.begin(), cellsToRemove.end(), std::greater<Vec2>());
         cellsToRemove.erase(std::unique(cellsToRemove.begin(), cellsToRemove.end()), cellsToRemove.end());
 
         for (auto& cell : cellsToRemove) {
@@ -236,7 +236,7 @@ void GameWorld::MoveCellsAnimated(std::vector<CellMoveData>&& moveData, double a
     _animationState->FinalCellState = Cell::CellState::Normal;
 }
 
-void GameWorld::DestroyCellsAnimated(std::vector<Point>&& cellsToDestroy, double animationTime, std::function<void()> completion)
+void GameWorld::DestroyCellsAnimated(std::vector<Vec2>&& cellsToDestroy, double animationTime, std::function<void()> completion)
 {
     _animationState.emplace();
 
@@ -261,8 +261,8 @@ void GameWorld::MoveDownCells()
             } else if (destroyedCellCount > 0) {
                 int newRow = j + destroyedCellCount;
 
-                auto startPosition = Point { i, j };
-                auto finalPosition = Point { i, newRow };
+                auto startPosition = Vec2 { i, j };
+                auto finalPosition = Vec2 { i, newRow };
 
                 cellMoveData.push_back(CellMoveData { startPosition, finalPosition, At(startPosition).Type });
 
@@ -273,8 +273,8 @@ void GameWorld::MoveDownCells()
         // Fill the board again by generating destroyedCellCount number of new cells and animate them in from the top
 
         for (int cellInd = 0; cellInd < destroyedCellCount; ++cellInd) {
-            auto finalPosition = Point { i, cellInd };
-            auto startPosition = Point { i, cellInd - destroyedCellCount };
+            auto finalPosition = Vec2 { i, cellInd };
+            auto startPosition = Vec2 { i, cellInd - destroyedCellCount };
             auto newCellType = GetRandomCell().Type;
 
             cellMoveData.push_back(CellMoveData { startPosition, finalPosition, newCellType });

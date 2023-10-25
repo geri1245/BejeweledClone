@@ -32,7 +32,7 @@
     <ClCompile Include="InputProcessor.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
-    <ClCompile Include="Point.cpp">
+    <ClCompile Include="Vec2.cpp">
       <Filter>Source Files\Library</Filter>
     </ClCompile>
     <ClCompile Include="Player.cpp">
@@ -55,7 +55,7 @@
     <ClInclude Include="InputProcessor.h">
       <Filter>Source Files</Filter>
     </ClInclude>
-    <ClInclude Include="Point.h">
+    <ClInclude Include="Vec2.h">
       <Filter>Source Files\Library</Filter>
     </ClInclude>
     <ClInclude Include="Player.h">

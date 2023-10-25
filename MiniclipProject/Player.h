@@ -9,16 +9,16 @@ public:
 
 private:
     struct SelectedCell {
-        SelectedCell(Point initialCoordinates, Point selectedIndex, GameWorld& gameWorld, bool isDragging);
+        SelectedCell(Vec2 initialCoordinates, Vec2 selectedIndex, GameWorld& gameWorld, bool isDragging);
         ~SelectedCell();
 
-        void UpdateBoardState(Point currentPosition);
+        void UpdateBoardState(Vec2 currentPosition);
         bool IsDragging() const;
-        Point Index() const;
+        Vec2 Index() const;
 
     private:
-        Point _initialCoordinates;
-        Point _selectedIndex;
+        Vec2 _initialCoordinates;
+        Vec2 _selectedIndex;
         GameWorld& _gameWorld;
         bool _isDragging;
     };
@@ -28,11 +28,11 @@ private:
     std::unique_ptr<EventToken> _mouseDragStartedToken;
     std::unique_ptr<EventToken> _mouseDragMovedToken;
     std::unique_ptr<EventToken> _mouseDragEndedToken;
-    std::optional<Point> _draggedCell; // Used for mouse drag
+    std::optional<Vec2> _draggedCell; // Used for mouse drag
     std::optional<SelectedCell> _selectedCell; // Used for mouse selection
 
-    void OnMouseDragStarted(Point position);
-    void OnMouseDragMoved(Point position);
-    void OnMouseDragEnded(Point position);
-    void OnMouseClicked(Point position);
+    void OnMouseDragStarted(Vec2 position);
+    void OnMouseDragMoved(Vec2 position);
+    void OnMouseDragEnded(Vec2 position);
+    void OnMouseClicked(Vec2 position);
 };

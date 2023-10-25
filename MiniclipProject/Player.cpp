@@ -2,22 +2,22 @@
 
 Player::Player(InputProcessor& inputProcessor, GameWorld& gameWorld)
     : _gameWorld(&gameWorld)
-    , _mouseMoveToken(inputProcessor.MouseClicked.Subscribe([this](Point position) {
+    , _mouseMoveToken(inputProcessor.MouseClicked.Subscribe([this](Vec2 position) {
         if (_gameWorld->IsInteractionEnabled()) {
             OnMouseClicked(position);
         }
     }))
-    , _mouseDragStartedToken(inputProcessor.MouseDragStarted.Subscribe([this](Point position) {
+    , _mouseDragStartedToken(inputProcessor.MouseDragStarted.Subscribe([this](Vec2 position) {
         if (_gameWorld->IsInteractionEnabled()) {
             OnMouseDragStarted(position);
         }
     }))
-    , _mouseDragMovedToken(inputProcessor.MouseDragMoved.Subscribe([this](Point position) {
+    , _mouseDragMovedToken(inputProcessor.MouseDragMoved.Subscribe([this](Vec2 position) {
         if (_gameWorld->IsInteractionEnabled()) {
             OnMouseDragMoved(position);
         }
     }))
-    , _mouseDragEndedToken(inputProcessor.MouseDragEnded.Subscribe([this](Point position) {
+    , _mouseDragEndedToken(inputProcessor.MouseDragEnded.Subscribe([this](Vec2 position) {
         if (_gameWorld->IsInteractionEnabled()) {
             OnMouseDragEnded(position);
         }
@@ -25,7 +25,7 @@ Player::Player(InputProcessor& inputProcessor, GameWorld& gameWorld)
 {
 }
 
-void Player::OnMouseClicked(Point clickedCoordinates)
+void Player::OnMouseClicked(Vec2 clickedCoordinates)
 {
     _draggedCell.reset();
 
@@ -44,7 +44,7 @@ void Player::OnMouseClicked(Point clickedCoordinates)
     }
 }
 
-void Player::OnMouseDragStarted(Point clickedCoordinates)
+void Player::OnMouseDragStarted(Vec2 clickedCoordinates)
 {
     auto draggedCell = _gameWorld->GetTileIndicesAtPoint(clickedCoordinates);
     if (draggedCell) {
@@ -52,21 +52,21 @@ void Player::OnMouseDragStarted(Point clickedCoordinates)
     }
 }
 
-void Player::OnMouseDragMoved(Point position)
+void Player::OnMouseDragMoved(Vec2 position)
 {
     if (_selectedCell && _selectedCell->IsDragging()) {
         _selectedCell->UpdateBoardState(position);
     }
 }
 
-void Player::OnMouseDragEnded(Point position)
+void Player::OnMouseDragEnded(Vec2 position)
 {
     if (_selectedCell && _selectedCell->IsDragging()) {
         _selectedCell.reset();
     }
 }
 
-Player::SelectedCell::SelectedCell(Point initialCoordinates, Point selectedIndex, GameWorld& gameWorld, bool isDragging)
+Player::SelectedCell::SelectedCell(Vec2 initialCoordinates, Vec2 selectedIndex, GameWorld& gameWorld, bool isDragging)
     : _initialCoordinates(initialCoordinates)
     , _selectedIndex(selectedIndex)
     , _gameWorld(gameWorld)
@@ -80,7 +80,7 @@ Player::SelectedCell::~SelectedCell()
     _gameWorld.SetActiveCell(std::nullopt);
 }
 
-void Player::SelectedCell::UpdateBoardState(Point currentPosition)
+void Player::SelectedCell::UpdateBoardState(Vec2 currentPosition)
 {
     _gameWorld.SetActiveCell(_selectedIndex, currentPosition - _initialCoordinates);
 }
@@ -90,7 +90,7 @@ bool Player::SelectedCell::IsDragging() const
     return _isDragging;
 }
 
-Point Player::SelectedCell::Index() const
+Vec2 Player::SelectedCell::Index() const
 {
     return _selectedIndex;
 }
