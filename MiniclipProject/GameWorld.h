@@ -31,6 +31,8 @@ public:
 
     const int RowCount, ColCount;
 
+    Event<std::function<void(Vec2 lhs, Vec2 rhs)>> TileDragCompleted;
+
     GameWorld(int rowCount, int colCount, int tileKindCount, Screen& screen);
 
     void Draw();
@@ -39,7 +41,7 @@ public:
 
     void SetActiveCell(std::optional<Vec2> index, Vec2 offset = Vec2 { 0, 0 });
 
-    void TrySwitchCells(Vec2 lhs, Vec2 rhs);
+    bool TrySwitchCells(Vec2 source, Vec2 destination, bool isDraggedCellTheSource = false);
 
     std::optional<Vec2> GetTileIndicesAtPoint(Vec2 position);
 
@@ -48,6 +50,7 @@ private:
         Vec2 StartingPosition;
         Vec2 FinalPosition;
         int CellType;
+        std::optional<Vec2> StartPositionOverride;
     };
 
     struct AnimationState {
@@ -66,6 +69,7 @@ private:
     };
 
     static constexpr int TileSize = 70; // The provided assets have this size, so for now just use it
+    static constexpr int DragOffsetSuccessThreshold = int(TileSize * 0.8);
     static constexpr double CellSwitchAnimationDurationMs = 200.0;
     static constexpr double CellDestroyAnimationDurationMs = 1000.0;
     static constexpr double CellFallAnimationDurationMs = 800.0;
@@ -79,8 +83,11 @@ private:
     void DestroyCellsAnimated(std::vector<Vec2>&& cellsToDestroy, double animationTime, std::function<void()> completion);
     void MoveDownCells();
 
+    bool IsIndexOnTheBoard(Vec2 index) const;
+
+    // The board is stored in a column major order. Columns are growing from left to right. Rows are growing from top to bottom.
     GameBoard _gameBoard;
-    Screen* _screen;
+    Screen* _screen = nullptr;
 
     std::random_device _randomDevice;
     std::mt19937 _randomEngine;

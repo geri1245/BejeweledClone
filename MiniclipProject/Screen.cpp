@@ -14,6 +14,9 @@ std::array<std::string, AssetTypeCount> AssetNames = {
     "Assets/Color4.png",
     "Assets/Color5.png",
 };
+
+static constexpr const char* BackgroundImageName = "Assets/Background.png";
+
 }
 
 bool Screen::Initialize()
@@ -35,27 +38,11 @@ bool Screen::Initialize()
         return false;
     }
 
-    //_screenSurface = SDL_GetWindowSurface(_window);
-    // if (!_screenSurface) {
-    //    std::cerr << "Screen surface could not be created! SDL_Error: " << SDL_GetError() << std::endl;
-    //    return false;
-    //}
-
     _renderer = SDL_CreateRenderer(_window, -1, 0);
     if (!_renderer) {
         std::cerr << "SDL renderer could not be created! SDL_Error: " << SDL_GetError() << std::endl;
         return false;
     }
-
-    //_renderTarget = SDL_CreateTexture(_renderer, SDL_PIXELFORMAT_RGBA8888, SDL_TEXTUREACCESS_TARGET, ScreenWidth, ScreenHeight);
-    // if (!_renderTarget) {
-    //    std::cerr << "SDL render target could not be created! SDL_Error: " << SDL_GetError() << std::endl;
-    //    return false;
-    //}
-
-    // SDL_SetRenderTarget(_renderer, _renderTarget);
-
-    SDL_SetRenderDrawColor(_renderer, 255, 0, 0, 255);
 
     return true;
 }
@@ -70,6 +57,12 @@ bool Screen::LoadAssets()
         }
 
         _assetImages.push_back(image);
+    }
+
+    _backgroundImage = LoadImage(BackgroundImageName);
+
+    if (!_backgroundImage) {
+        return false;
     }
 
     return true;
@@ -92,6 +85,7 @@ Screen::~Screen()
     for (auto* texture : _assetImages) {
         SDL_DestroyTexture(texture);
     }
+    SDL_DestroyTexture(_backgroundImage);
 
     SDL_DestroyWindow(_window);
     SDL_Quit();
@@ -100,7 +94,7 @@ Screen::~Screen()
 void Screen::BeginFrame()
 {
     SDL_RenderClear(_renderer);
-    // SDL_FillRect(_screenSurface, nullptr, SDL_MapRGB(_screenSurface->format, 255, 255, 255));
+    SDL_RenderCopy(_renderer, _backgroundImage, nullptr, nullptr);
 }
 
 void Screen::DrawCell(Vec2 coords, int cellType, int cellSize)

@@ -28,11 +28,11 @@ private:
     static constexpr int AnimationTime = 5000;
 
     SDL_Window* _window = nullptr;
-    SDL_Surface* _screenSurface = nullptr;
     SDL_Renderer* _renderer = nullptr;
     SDL_Texture* _renderTarget = nullptr;
 
     std::vector<SDL_Texture*> _assetImages;
+    SDL_Texture* _backgroundImage;
 
     SDL_Texture* LoadImage(const std::string& filePath);
 };

@@ -22,6 +22,9 @@ Player::Player(InputProcessor& inputProcessor, GameWorld& gameWorld)
             OnMouseDragEnded(position);
         }
     }))
+    , _tileDragCompletedToken(gameWorld.TileDragCompleted.Subscribe([this](Vec2 source, Vec2 destination) {
+        OnTileDragCompleted(source, destination);
+    }))
 {
 }
 
@@ -42,6 +45,13 @@ void Player::OnMouseClicked(Vec2 clickedCoordinates)
     } else if (auto newSelectedCell = _gameWorld->GetTileIndicesAtPoint(clickedCoordinates)) {
         _selectedCell.emplace(clickedCoordinates, *newSelectedCell, *_gameWorld, false);
     }
+}
+
+void Player::OnTileDragCompleted(Vec2 source, Vec2 destination)
+{
+    assert(_selectedCell->Index() == source);
+
+    _selectedCell.reset();
 }
 
 void Player::OnMouseDragStarted(Vec2 clickedCoordinates)
@@ -77,12 +87,13 @@ Player::SelectedCell::SelectedCell(Vec2 initialCoordinates, Vec2 selectedIndex, 
 
 Player::SelectedCell::~SelectedCell()
 {
-    _gameWorld.SetActiveCell(std::nullopt);
+    _gameWorld.SetActiveCell(std::nullopt, _currentPosition);
 }
 
 void Player::SelectedCell::UpdateBoardState(Vec2 currentPosition)
 {
     _gameWorld.SetActiveCell(_selectedIndex, currentPosition - _initialCoordinates);
+    _currentPosition = currentPosition;
 }
 
 bool Player::SelectedCell::IsDragging() const

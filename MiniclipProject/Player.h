@@ -21,6 +21,7 @@ private:
         Vec2 _selectedIndex;
         GameWorld& _gameWorld;
         bool _isDragging;
+        Vec2 _currentPosition = Vec2 { 0, 0 };
     };
 
     GameWorld* _gameWorld = nullptr;
@@ -28,6 +29,7 @@ private:
     std::unique_ptr<EventToken> _mouseDragStartedToken;
     std::unique_ptr<EventToken> _mouseDragMovedToken;
     std::unique_ptr<EventToken> _mouseDragEndedToken;
+    std::unique_ptr<EventToken> _tileDragCompletedToken;
     std::optional<Vec2> _draggedCell; // Used for mouse drag
     std::optional<SelectedCell> _selectedCell; // Used for mouse selection
 
@@ -35,4 +37,5 @@ private:
     void OnMouseDragMoved(Vec2 position);
     void OnMouseDragEnded(Vec2 position);
     void OnMouseClicked(Vec2 position);
+    void OnTileDragCompleted(Vec2 source, Vec2 destination);
 };

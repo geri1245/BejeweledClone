@@ -42,7 +42,7 @@ public:
     {
         for (const auto& subscriber : _subscribers) {
             if (subscriber)
-                subscriber(std::forward<Params...>(params...));
+                subscriber(std::forward<Params>(params)...);
         }
     }
 

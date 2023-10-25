@@ -55,8 +55,9 @@ void GameWorld::Draw()
     }
 
     if (_animationState) {
-        for (const auto& [startPosition, endPosition, cellType] : _animationState->AnimationData) {
-            _screen->DrawCell(startPosition.Lerp(endPosition, _animationState->AnimationProgress), cellType, TileSize);
+        for (const auto& [startPosition, endPosition, cellType, startPositionOverride] : _animationState->AnimationData) {
+            auto realStartPosition = startPositionOverride.value_or(startPosition);
+            _screen->DrawCell(realStartPosition.Lerp(endPosition, _animationState->AnimationProgress), cellType, TileSize);
         }
     }
 }
@@ -64,9 +65,9 @@ void GameWorld::Draw()
 void GameWorld::Update(uint64_t now)
 {
     if (_animationState) {
-        _animationState->AnimationProgress = (now - _animationState->AnimationStartTime) / _animationState->AnimationDuration;
+        double rawProgress = (now - _animationState->AnimationStartTime) / _animationState->AnimationDuration;
 
-        if (_animationState->AnimationProgress > 1.0) {
+        if (rawProgress > 1.0) {
             auto completion = std::move(_animationState->Completion);
 
             for (auto& column : _gameBoard) {
@@ -79,7 +80,11 @@ void GameWorld::Update(uint64_t now)
 
             _animationState.reset();
 
-            completion();
+            if (completion) {
+                completion();
+            }
+        } else {
+            _animationState->AnimationProgress = pow(rawProgress, 3);
         }
     }
 }
@@ -92,36 +97,66 @@ bool GameWorld::IsInteractionEnabled() const
 void GameWorld::SetActiveCell(std::optional<Vec2> index, Vec2 offset)
 {
     if (index) {
-        if (_activeCellState && _activeCellState->Index == index) {
-            _activeCellState->Offset = offset.KeepGreaterComponent();
-        } else {
-            _activeCellState.emplace(
-                *index, offset.KeepGreaterComponent(), SDL_GetTicks64());
-            At(*index).State = Cell::CellState::Active;
+        if (abs(offset.x) > DragOffsetSuccessThreshold) { // Successful drag in the x direction
+            if (auto newCell = *index + Vec2 { offset.x > 0 ? 1 : -1, 0 }; IsIndexOnTheBoard(newCell)) {
+                if (TrySwitchCells(*index, newCell, true)) {
+                    TileDragCompleted.Invoke(*index, newCell);
+                }
+            }
+        } else if (abs(offset.y) > DragOffsetSuccessThreshold) { // Successful drag in the y direction
+            if (auto newCell = *index + Vec2 { 0, offset.y > 0 ? 1 : -1 }; IsIndexOnTheBoard(newCell)) {
+                if (TrySwitchCells(*index, newCell, true)) {
+                    TileDragCompleted.Invoke(*index, newCell);
+                }
+            }
+        } else { // Just update the drag state (eg. cell position)
+            if (_activeCellState && _activeCellState->Index == index) {
+                _activeCellState->Offset = offset;
+            } else {
+                _activeCellState.emplace(
+                    *index, offset, SDL_GetTicks64());
+                At(*index).State = Cell::CellState::Active;
+            }
         }
     } else {
         if (_activeCellState) {
-            At(_activeCellState->Index).State = Cell::CellState::Normal;
+            auto activeIndex = _activeCellState->Index;
+            if (At(activeIndex).State == Cell::CellState::Active) {
+                At(activeIndex).State = Cell::CellState::Normal;
+
+                if (offset != Vec2 { 0, 0 }) {
+                    MoveCellsAnimated({ CellMoveData { Vec2 {},
+                                          activeIndex,
+                                          At(activeIndex).Type,
+                                          activeIndex * TileSize + _activeCellState->Offset } },
+                        CellSwitchAnimationDurationMs, nullptr);
+                }
+            }
             _activeCellState.reset();
         }
     }
 }
 
-void GameWorld::TrySwitchCells(Vec2 lhs, Vec2 rhs)
+bool GameWorld::TrySwitchCells(Vec2 lhs, Vec2 rhs, bool isDraggedCellTheSource)
 {
     assert(lhs.x >= 0 && lhs.x < RowCount);
     assert(lhs.y >= 0 && lhs.y < ColCount);
     assert(rhs.x >= 0 && rhs.x < RowCount);
     assert(rhs.y >= 0 && rhs.y < ColCount);
+    assert(!isDraggedCellTheSource || _activeCellState);
 
     if (lhs.DistanceSquared(rhs) == 1) {
         MoveCellsAnimated(
             {
-                CellMoveData { lhs, rhs, At(lhs).Type },
-                CellMoveData { rhs, lhs, At(rhs).Type },
+                CellMoveData { lhs, rhs, At(lhs).Type, isDraggedCellTheSource ? _activeCellState->Index * TileSize + _activeCellState->Offset : std::optional<Vec2>() },
+                CellMoveData { rhs, lhs, At(rhs).Type, std::nullopt },
             },
             CellSwitchAnimationDurationMs, [this]() { UpdateBoardState(); });
+
+        return true;
     }
+
+    return false;
 }
 
 std::optional<Vec2> GameWorld::GetTileIndicesAtPoint(Vec2 position)
@@ -226,7 +261,7 @@ void GameWorld::MoveCellsAnimated(std::vector<CellMoveData>&& moveData, double a
         finalCell.Type = animationData.CellType;
 
         animationData.FinalPosition = animationData.FinalPosition * TileSize;
-        animationData.StartingPosition = animationData.StartingPosition * TileSize;
+        animationData.StartingPosition = animationData.StartPositionOverride.value_or(animationData.StartingPosition) * TileSize;
     }
 
     _animationState->AnimationStartTime = SDL_GetTicks64();
@@ -271,7 +306,6 @@ void GameWorld::MoveDownCells()
         }
 
         // Fill the board again by generating destroyedCellCount number of new cells and animate them in from the top
-
         for (int cellInd = 0; cellInd < destroyedCellCount; ++cellInd) {
             auto finalPosition = Vec2 { i, cellInd };
             auto startPosition = Vec2 { i, cellInd - destroyedCellCount };
@@ -282,4 +316,9 @@ void GameWorld::MoveDownCells()
     }
 
     MoveCellsAnimated(std::move(cellMoveData), CellFallAnimationDurationMs, [this]() { UpdateBoardState(); });
+}
+
+bool GameWorld::IsIndexOnTheBoard(Vec2 index) const
+{
+    return !(index.x < 0 || index.x > ColCount - 1 || index.y < 0 || index.y > RowCount - 1);
 }
