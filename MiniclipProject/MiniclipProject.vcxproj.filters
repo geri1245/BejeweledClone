@@ -68,4 +68,84 @@
       <Filter>Source Files</Filter>
     </ClInclude>
   </ItemGroup>
+  <ItemGroup>
+    <Image Include="Assets\Background.png">
+      <Filter>Assets</Filter>
+    </Image>
+    <Image Include="Assets\Color1.png">
+      <Filter>Assets</Filter>
+    </Image>
+    <Image Include="Assets\Color2.png">
+      <Filter>Assets</Filter>
+    </Image>
+    <Image Include="Assets\Color3.png">
+      <Filter>Assets</Filter>
+    </Image>
+    <Image Include="Assets\Color4.png">
+      <Filter>Assets</Filter>
+    </Image>
+    <Image Include="Assets\Color5.png">
+      <Filter>Assets</Filter>
+    </Image>
+    <Image Include="Assets\Gravity\Gravity1.png">
+      <Filter>Assets</Filter>
+    </Image>
+    <Image Include="Assets\Gravity\Gravity2.png">
+      <Filter>Assets</Filter>
+    </Image>
+    <Image Include="Assets\Gravity\Gravity3.png">
+      <Filter>Assets</Filter>
+    </Image>
+    <Image Include="Assets\Gravity\Gravity4.png">
+      <Filter>Assets</Filter>
+    </Image>
+    <Image Include="Assets\Gravity\Gravity5.png">
+      <Filter>Assets</Filter>
+    </Image>
+    <Image Include="Assets\Gravity\Gravity6.png">
+      <Filter>Assets</Filter>
+    </Image>
+    <Image Include="Assets\Gravity\Gravity7.png">
+      <Filter>Assets</Filter>
+    </Image>
+    <Image Include="Assets\Gravity\Gravity8.png">
+      <Filter>Assets</Filter>
+    </Image>
+    <Image Include="Assets\Gravity\Gravity9.png">
+      <Filter>Assets</Filter>
+    </Image>
+    <Image Include="Assets\Gravity\Gravity10.png">
+      <Filter>Assets</Filter>
+    </Image>
+    <Image Include="Assets\Gravity\Gravity11.png">
+      <Filter>Assets</Filter>
+    </Image>
+    <Image Include="Assets\Gravity\Gravity12.png">
+      <Filter>Assets</Filter>
+    </Image>
+    <Image Include="Assets\Gravity\Gravity13.png">
+      <Filter>Assets</Filter>
+    </Image>
+    <Image Include="Assets\Gravity\Gravity14.png">
+      <Filter>Assets</Filter>
+    </Image>
+    <Image Include="Assets\Gravity\Gravity15.png">
+      <Filter>Assets</Filter>
+    </Image>
+    <Image Include="Assets\Gravity\Gravity16.png">
+      <Filter>Assets</Filter>
+    </Image>
+    <Image Include="Assets\Gravity\Gravity17.png">
+      <Filter>Assets</Filter>
+    </Image>
+    <Image Include="Assets\Gravity\Gravity18.png">
+      <Filter>Assets</Filter>
+    </Image>
+    <Image Include="Assets\Gravity\Gravity19.png">
+      <Filter>Assets</Filter>
+    </Image>
+    <Image Include="Assets\Gravity\Gravity20.png">
+      <Filter>Assets</Filter>
+    </Image>
+  </ItemGroup>
 </Project>

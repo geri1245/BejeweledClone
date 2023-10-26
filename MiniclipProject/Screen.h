@@ -1,5 +1,8 @@
 #pragma once
 
+#include "SpriteAnimation.h"
+#include "Vec2.h"
+
 #include <SDL.h>
 
 #include <memory>
@@ -8,18 +11,18 @@
 #include <unordered_map>
 #include <vector>
 
-#include "Vec2.h"
-
 class Screen {
 public:
     static std::unique_ptr<Screen> GetScreen();
     ~Screen();
 
-    void BeginFrame();
-    void DrawCell(Vec2 coords, int cellType, int sourceSize, int destinationSize);
-    void Present();
+    void BeginFrame() const;
+    void DrawCell(Vec2 coords, int cellType, int sourceSize, int destinationSize) const;
+    void DrawDestroyAnimation(Vec2 coords, int size, double progress);
+    void DrawTexture(Vec2 coords, SDL_Texture* texture, SDL_Rect* sourceRect, SDL_Rect* destRect) const;
+    void Present() const;
 
-    SDL_Texture* LoadImage(const std::string& filePath);
+    SDL_Texture* LoadImage(const std::string& filePath) const;
 
 private:
     bool Initialize();
@@ -34,5 +37,7 @@ private:
     SDL_Texture* _renderTarget = nullptr;
 
     std::vector<SDL_Texture*> _assetImages;
-    SDL_Texture* _backgroundImage;
+    SDL_Texture* _backgroundImage = nullptr;
+
+    std::unique_ptr<SpriteAnimation> _gravityAnimation;
 };

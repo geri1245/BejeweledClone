@@ -16,6 +16,7 @@ std::array<std::string, AssetTypeCount> AssetNames = {
 };
 
 static constexpr const char* BackgroundImageName = "Assets/Background.png";
+static constexpr const char* SpriteAnimationDirectory = "Assets/Gravity";
 
 }
 
@@ -65,6 +66,8 @@ bool Screen::LoadAssets()
         return false;
     }
 
+    _gravityAnimation = std::make_unique<SpriteAnimation>(SpriteAnimationDirectory, *this);
+
     return true;
 }
 
@@ -91,39 +94,40 @@ Screen::~Screen()
     SDL_Quit();
 }
 
-void Screen::BeginFrame()
+void Screen::BeginFrame() const
 {
     SDL_RenderClear(_renderer);
     SDL_RenderCopy(_renderer, _backgroundImage, nullptr, nullptr);
 }
 
-void Screen::DrawCell(Vec2 coords, int cellType, int sourceSize, int destinationSize)
+void Screen::DrawCell(Vec2 coords, int cellType, int sourceSize, int destinationSize) const
 {
     SDL_Rect srcRect { 0, 0, sourceSize, sourceSize };
     SDL_Rect dstRect { coords.x, coords.y, destinationSize, destinationSize };
-    // SDL_BlitSurface(_assetImages[cellType], nullptr, _screenSurface, &rect);
     SDL_RenderCopy(_renderer, _assetImages[cellType], &srcRect, &dstRect);
 }
 
-void Screen::Present()
+void Screen::DrawDestroyAnimation(Vec2 coords, int size, double progress)
+{
+    _gravityAnimation->Draw(coords, size, progress);
+}
+
+void Screen::DrawTexture(Vec2 coords, SDL_Texture* texture, SDL_Rect* sourceRect, SDL_Rect* destRect) const
+{
+    SDL_RenderCopy(_renderer, texture, sourceRect, destRect);
+}
+
+void Screen::Present() const
 {
     SDL_RenderPresent(_renderer);
 }
 
-SDL_Texture* Screen::LoadImage(const std::string& filePath)
+SDL_Texture* Screen::LoadImage(const std::string& filePath) const
 {
     // Load image at specified path
-    SDL_Surface* loadedSurface = IMG_Load(filePath.c_str());
-    if (!loadedSurface) {
-        std::cerr << "Failed to load image. SDL_image Error: " << IMG_GetError() << std::endl;
-        return nullptr;
-    }
-
-    SDL_Texture* texture = SDL_CreateTextureFromSurface(_renderer, loadedSurface);
-    SDL_FreeSurface(loadedSurface);
-
+    SDL_Texture* texture = IMG_LoadTexture(_renderer, filePath.c_str());
     if (!texture) {
-        std::cerr << "Failed to convert surface to the requested format! SDL_Error: " << SDL_GetError() << std::endl;
+        std::cerr << "Failed to load image texture. SDL_image Error: " << IMG_GetError() << std::endl;
         return nullptr;
     }
 

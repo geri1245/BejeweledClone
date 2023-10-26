@@ -76,8 +76,8 @@ private:
     static constexpr int TileSize = 70; // The provided assets have this size, so for now just use it
     static constexpr int DragOffsetSuccessThreshold = int(TileSize * 0.8);
     static constexpr double CellSwitchAnimationDurationMs = 200.0;
-    static constexpr double CellDestroyAnimationDurationMs = 1000.0;
-    static constexpr double CellFallAnimationDurationMs = 800.0;
+    static constexpr double CellDestroyAnimationDurationMs = 400.0;
+    static constexpr double CellFallAnimationDurationMs = 600.0;
 
     Cell& At(Vec2 indices);
     const Cell& At(Vec2 indices) const;

@@ -64,7 +64,13 @@ void GameWorld::Draw()
         } else if (std::holds_alternative<std::vector<CellDestructionData>>(_animationState->AnimationData)) {
             auto& animationData = std::get<std::vector<CellDestructionData>>(_animationState->AnimationData);
             for (const auto& [cellIndex, cellType] : animationData) {
-                _screen->DrawCell(cellIndex * TileSize, cellType, TileSize, (1 - _animationState->AnimationProgress) * TileSize);
+                double newSize = (1 - _animationState->AnimationProgress) * TileSize;
+                auto halfDiff = int((TileSize - newSize) / 2);
+                auto offset = Vec2 { halfDiff, halfDiff };
+
+                _screen->DrawCell(cellIndex * TileSize + Vec2 { halfDiff, halfDiff }, cellType, TileSize, int(newSize));
+                //_screen->DrawDestroyAnimation(cellIndex * TileSize + Vec2 { TileSize, TileSize } / 2 - offset, TileSize - newSize, _animationState->AnimationProgress);
+                _screen->DrawDestroyAnimation(cellIndex * TileSize, TileSize, _animationState->AnimationProgress);
             }
         }
     }
