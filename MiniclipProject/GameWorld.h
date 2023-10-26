@@ -53,8 +53,13 @@ private:
         std::optional<Vec2> StartPositionOverride;
     };
 
+    struct CellDestructionData {
+        Vec2 CellIndex;
+        int CellType;
+    };
+
     struct AnimationState {
-        std::vector<CellMoveData> AnimationData;
+        std::variant<std::vector<CellMoveData>, std::vector<CellDestructionData>> AnimationData;
         std::function<void()> Completion;
         uint64_t AnimationStartTime = 0;
         double AnimationDuration = 0;

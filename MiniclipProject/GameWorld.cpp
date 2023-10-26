@@ -8,7 +8,6 @@ Cell::Cell(int type)
 void Cell::Destroy()
 {
     State = CellState::Destroyed;
-    Type = -1;
 }
 
 GameWorld::GameWorld(int rowCount, int colCount, int tileKindCount, Screen& screen)
@@ -35,7 +34,7 @@ void GameWorld::Draw()
         auto& currentRow = _gameBoard[i];
         for (int j = 0; j < currentRow.size(); ++j) {
             if (_gameBoard[i][j].State == Cell::CellState::Normal) {
-                _screen->DrawCell(Vec2 { i * TileSize, j * TileSize }, _gameBoard[i][j].Type, TileSize);
+                _screen->DrawCell(Vec2 { i * TileSize, j * TileSize }, _gameBoard[i][j].Type, TileSize, TileSize);
             }
         }
     }
@@ -44,20 +43,29 @@ void GameWorld::Draw()
         auto now = SDL_GetTicks64();
 
         // Make a periodic function with a period of 1 second and in the range [0, 0.2]
-        auto scaleDiff = (sin((now - _activeCellState->AnimationStartTime) / 1000.f * 2 * M_PI) + 1) * 0.1;
+        auto scaleDiff = (sin((now - _activeCellState->AnimationStartTime) / 1000.f * 2 * M_PI)) * 0.1;
         auto newSize = TileSize * (1 + scaleDiff);
         auto halfDiff = int((newSize - TileSize) / 2.0);
 
         _screen->DrawCell(
             _activeCellState->Index * TileSize - Vec2 { halfDiff, halfDiff } + _activeCellState->Offset,
             At(_activeCellState->Index).Type,
+            TileSize,
             int(newSize));
     }
 
     if (_animationState) {
-        for (const auto& [startPosition, endPosition, cellType, startPositionOverride] : _animationState->AnimationData) {
-            auto realStartPosition = startPositionOverride.value_or(startPosition);
-            _screen->DrawCell(realStartPosition.Lerp(endPosition, _animationState->AnimationProgress), cellType, TileSize);
+        if (std::holds_alternative<std::vector<CellMoveData>>(_animationState->AnimationData)) {
+            auto& animationData = std::get<std::vector<CellMoveData>>(_animationState->AnimationData);
+            for (const auto& [startPosition, endPosition, cellType, startPositionOverride] : animationData) {
+                auto realStartPosition = startPositionOverride.value_or(startPosition);
+                _screen->DrawCell(realStartPosition.Lerp(endPosition, _animationState->AnimationProgress), cellType, TileSize, TileSize);
+            }
+        } else if (std::holds_alternative<std::vector<CellDestructionData>>(_animationState->AnimationData)) {
+            auto& animationData = std::get<std::vector<CellDestructionData>>(_animationState->AnimationData);
+            for (const auto& [cellIndex, cellType] : animationData) {
+                _screen->DrawCell(cellIndex * TileSize, cellType, TileSize, (1 - _animationState->AnimationProgress) * TileSize);
+            }
         }
     }
 }
@@ -253,9 +261,7 @@ void GameWorld::MoveCellsAnimated(std::vector<CellMoveData>&& moveData, double a
     assert(!_animationState);
     _animationState.emplace();
 
-    _animationState->AnimationData = std::move(moveData);
-
-    for (auto& animationData : _animationState->AnimationData) {
+    for (auto& animationData : moveData) {
         auto& finalCell = At(animationData.FinalPosition);
         finalCell.State = Cell::CellState::WaitingForAnimationToComplete;
         finalCell.Type = animationData.CellType;
@@ -263,6 +269,8 @@ void GameWorld::MoveCellsAnimated(std::vector<CellMoveData>&& moveData, double a
         animationData.FinalPosition = animationData.FinalPosition * TileSize;
         animationData.StartingPosition = animationData.StartPositionOverride.value_or(animationData.StartingPosition) * TileSize;
     }
+
+    _animationState->AnimationData = std::move(moveData);
 
     _animationState->AnimationStartTime = SDL_GetTicks64();
     _animationState->AnimationProgress = 0.0;
@@ -274,6 +282,15 @@ void GameWorld::MoveCellsAnimated(std::vector<CellMoveData>&& moveData, double a
 void GameWorld::DestroyCellsAnimated(std::vector<Vec2>&& cellsToDestroy, double animationTime, std::function<void()> completion)
 {
     _animationState.emplace();
+
+    std::vector<CellDestructionData> animationData;
+    animationData.reserve(cellsToDestroy.size());
+
+    for (Vec2 cell : cellsToDestroy) {
+        animationData.push_back(CellDestructionData { cell, At(cell).Type });
+    }
+
+    _animationState->AnimationData = std::move(animationData);
 
     _animationState->AnimationStartTime = SDL_GetTicks64();
     _animationState->AnimationProgress = 0.0;

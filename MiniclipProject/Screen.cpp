@@ -97,10 +97,10 @@ void Screen::BeginFrame()
     SDL_RenderCopy(_renderer, _backgroundImage, nullptr, nullptr);
 }
 
-void Screen::DrawCell(Vec2 coords, int cellType, int cellSize)
+void Screen::DrawCell(Vec2 coords, int cellType, int sourceSize, int destinationSize)
 {
-    SDL_Rect srcRect { 0, 0, cellSize, cellSize };
-    SDL_Rect dstRect { coords.x, coords.y, cellSize, cellSize };
+    SDL_Rect srcRect { 0, 0, sourceSize, sourceSize };
+    SDL_Rect dstRect { coords.x, coords.y, destinationSize, destinationSize };
     // SDL_BlitSurface(_assetImages[cellType], nullptr, _screenSurface, &rect);
     SDL_RenderCopy(_renderer, _assetImages[cellType], &srcRect, &dstRect);
 }

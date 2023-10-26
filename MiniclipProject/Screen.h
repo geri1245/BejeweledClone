@@ -16,8 +16,10 @@ public:
     ~Screen();
 
     void BeginFrame();
-    void DrawCell(Vec2 coords, int cellType, int cellSize);
+    void DrawCell(Vec2 coords, int cellType, int sourceSize, int destinationSize);
     void Present();
+
+    SDL_Texture* LoadImage(const std::string& filePath);
 
 private:
     bool Initialize();
@@ -33,6 +35,4 @@ private:
 
     std::vector<SDL_Texture*> _assetImages;
     SDL_Texture* _backgroundImage;
-
-    SDL_Texture* LoadImage(const std::string& filePath);
 };
