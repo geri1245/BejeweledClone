@@ -4,6 +4,7 @@
 #include "Screen.h"
 #include "Vec2.h"
 
+#include <array>
 #include <optional>
 #include <random>
 #include <variant>
@@ -29,14 +30,14 @@ class GameWorld {
 public:
     using GameBoard = std::vector<std::vector<Cell>>;
 
-    const int RowCount, ColCount;
+    const int RowCount, ColCount, TileKindCount;
 
-    Event<std::function<void(Vec2 lhs, Vec2 rhs)>> TileDragCompleted;
+    Event<std::function<void(Vec2 source)>> TileDragCompleted;
 
     GameWorld(int rowCount, int colCount, int tileKindCount, Screen& screen);
 
     void Draw();
-    void Update(uint64_t now);
+    void Update();
     bool IsInteractionEnabled() const;
 
     void SetActiveCell(std::optional<Vec2> index, Vec2 offset = Vec2 { 0, 0 });
@@ -82,8 +83,12 @@ private:
     Cell& At(Vec2 indices);
     const Cell& At(Vec2 indices) const;
 
-    Cell GetRandomCell();
+    int GetRandomNumber(const std::array<int, 2>& excluding);
+    Cell GenerateCellForIndex(int i, int j);
+
+    std::vector<Vec2> GetCellsToDestroyFromCurrentState() const;
     void UpdateBoardState();
+    void UpdateBoardState(std::vector<Vec2>&& cellsToRemove);
     void MoveCellsAnimated(std::vector<CellMoveData>&& moveData, double animationTime, std::function<void()> completion);
     void DestroyCellsAnimated(std::vector<Vec2>&& cellsToDestroy, double animationTime, std::function<void()> completion);
     void MoveDownCells();

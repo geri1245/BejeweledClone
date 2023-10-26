@@ -1,5 +1,12 @@
 #include "GameWorld.h"
 
+namespace {
+bool Contains(const std::array<int, 2>& arr, int value)
+{
+    return std::find(arr.begin(), arr.end(), value) != arr.end();
+}
+}
+
 Cell::Cell(int type)
     : Type(type)
 {
@@ -10,9 +17,35 @@ void Cell::Destroy()
     State = CellState::Destroyed;
 }
 
+int GameWorld::GetRandomNumber(const std::array<int, 2>& excluding)
+{
+    int randomNumber = _randomDistribution(_randomEngine);
+    while (Contains(excluding, randomNumber)) {
+        randomNumber = (randomNumber + 1) % TileKindCount;
+    }
+
+    return randomNumber;
+}
+
+Cell GameWorld::GenerateCellForIndex(int i, int j)
+{
+    std::array<int, 2> excludedNumbers = { -1, -1 };
+
+    // If the current row's or column's previous 2 cells have the same type, then generate another kind
+    if (i > 1 && _gameBoard[i - 1][j].Type == _gameBoard[i - 2][j].Type) {
+        excludedNumbers[0] = _gameBoard[i - 1][j].Type;
+    }
+    if (j > 1 && _gameBoard[i][j - 1].Type == _gameBoard[i][j - 2].Type) {
+        excludedNumbers[0] = _gameBoard[i][j - 1].Type;
+    }
+
+    return Cell(GetRandomNumber(excludedNumbers));
+}
+
 GameWorld::GameWorld(int rowCount, int colCount, int tileKindCount, Screen& screen)
     : RowCount(rowCount)
     , ColCount(colCount)
+    , TileKindCount(tileKindCount)
     , _screen(&screen)
     , _randomEngine(_randomDevice())
     , _randomDistribution(0, tileKindCount - 1) // Random distribution is inclusive on both ends, so the range [0, n - 1] will contain n possible values
@@ -23,7 +56,7 @@ GameWorld::GameWorld(int rowCount, int colCount, int tileKindCount, Screen& scre
         auto& column = _gameBoard.emplace_back();
         column.reserve(rowCount);
         for (int j = 0; j < rowCount; ++j) {
-            column.push_back(GetRandomCell());
+            column.push_back(GenerateCellForIndex(i, j));
         }
     }
 }
@@ -76,8 +109,10 @@ void GameWorld::Draw()
     }
 }
 
-void GameWorld::Update(uint64_t now)
+void GameWorld::Update()
 {
+    auto now = SDL_GetTicks64();
+
     if (_animationState) {
         double rawProgress = (now - _animationState->AnimationStartTime) / _animationState->AnimationDuration;
 
@@ -114,13 +149,13 @@ void GameWorld::SetActiveCell(std::optional<Vec2> index, Vec2 offset)
         if (abs(offset.x) > DragOffsetSuccessThreshold) { // Successful drag in the x direction
             if (auto newCell = *index + Vec2 { offset.x > 0 ? 1 : -1, 0 }; IsIndexOnTheBoard(newCell)) {
                 if (TrySwitchCells(*index, newCell, true)) {
-                    TileDragCompleted.Invoke(*index, newCell);
+                    TileDragCompleted.Invoke(*index);
                 }
             }
         } else if (abs(offset.y) > DragOffsetSuccessThreshold) { // Successful drag in the y direction
             if (auto newCell = *index + Vec2 { 0, offset.y > 0 ? 1 : -1 }; IsIndexOnTheBoard(newCell)) {
                 if (TrySwitchCells(*index, newCell, true)) {
-                    TileDragCompleted.Invoke(*index, newCell);
+                    TileDragCompleted.Invoke(*index);
                 }
             }
         } else { // Just update the drag state (eg. cell position)
@@ -160,14 +195,37 @@ bool GameWorld::TrySwitchCells(Vec2 lhs, Vec2 rhs, bool isDraggedCellTheSource)
     assert(!isDraggedCellTheSource || _activeCellState);
 
     if (lhs.DistanceSquared(rhs) == 1) {
-        MoveCellsAnimated(
-            {
-                CellMoveData { lhs, rhs, At(lhs).Type, isDraggedCellTheSource ? _activeCellState->Index * TileSize + _activeCellState->Offset : std::optional<Vec2>() },
-                CellMoveData { rhs, lhs, At(rhs).Type, std::nullopt },
-            },
-            CellSwitchAnimationDurationMs, [this]() { UpdateBoardState(); });
+        auto tmp = At(lhs);
+        At(lhs) = At(rhs);
+        At(rhs) = tmp;
 
-        return true;
+        // Check if we can destroy something in the new state
+        auto cellsToDestroy = GetCellsToDestroyFromCurrentState();
+
+        // Restore the original state
+        tmp = At(lhs);
+        At(lhs) = At(rhs);
+        At(rhs) = tmp;
+
+        if (!cellsToDestroy.empty()) {
+            MoveCellsAnimated(
+                {
+                    CellMoveData { lhs, rhs, At(lhs).Type, isDraggedCellTheSource ? _activeCellState->Index * TileSize + _activeCellState->Offset : std::optional<Vec2>() },
+                    CellMoveData { rhs, lhs, At(rhs).Type, std::nullopt },
+                },
+                CellSwitchAnimationDurationMs, [this]() { UpdateBoardState(); });
+
+            return true;
+        } else if (_activeCellState) { // Just move back the moved cell to its original position
+            // This will only be invoked if we are dragging a cell, otherwise activeCellState is already reset
+            auto activeIndex = _activeCellState->Index;
+            MoveCellsAnimated({ CellMoveData { Vec2 {},
+                                  activeIndex,
+                                  At(activeIndex).Type,
+                                  activeIndex * TileSize + _activeCellState->Offset } },
+                CellSwitchAnimationDurationMs, nullptr);
+            TileDragCompleted.Invoke(activeIndex);
+        }
     }
 
     return false;
@@ -199,12 +257,7 @@ const Cell& GameWorld::At(Vec2 indices) const
     return _gameBoard[indices.x][indices.y];
 }
 
-Cell GameWorld::GetRandomCell()
-{
-    return _randomDistribution(_randomEngine);
-}
-
-void GameWorld::UpdateBoardState()
+std::vector<Vec2> GameWorld::GetCellsToDestroyFromCurrentState() const
 {
     std::vector<Vec2> cellsToRemove;
 
@@ -253,6 +306,16 @@ void GameWorld::UpdateBoardState()
     if (!cellsToRemove.empty()) {
         std::sort(cellsToRemove.begin(), cellsToRemove.end(), std::greater<Vec2>());
         cellsToRemove.erase(std::unique(cellsToRemove.begin(), cellsToRemove.end()), cellsToRemove.end());
+    }
+
+    return cellsToRemove;
+}
+
+void GameWorld::UpdateBoardState(std::vector<Vec2>&& cellsToRemove)
+{
+    if (!cellsToRemove.empty()) {
+        std::sort(cellsToRemove.begin(), cellsToRemove.end(), std::greater<Vec2>());
+        cellsToRemove.erase(std::unique(cellsToRemove.begin(), cellsToRemove.end()), cellsToRemove.end());
 
         for (auto& cell : cellsToRemove) {
             At(cell).Destroy();
@@ -260,6 +323,13 @@ void GameWorld::UpdateBoardState()
 
         DestroyCellsAnimated(std::move(cellsToRemove), CellDestroyAnimationDurationMs, [this]() { MoveDownCells(); });
     }
+}
+
+void GameWorld::UpdateBoardState()
+{
+    auto cellsToRemove = GetCellsToDestroyFromCurrentState();
+
+    UpdateBoardState(std::move(cellsToRemove));
 }
 
 void GameWorld::MoveCellsAnimated(std::vector<CellMoveData>&& moveData, double animationDuration, std::function<void()> completion)
@@ -332,7 +402,7 @@ void GameWorld::MoveDownCells()
         for (int cellInd = 0; cellInd < destroyedCellCount; ++cellInd) {
             auto finalPosition = Vec2 { i, cellInd };
             auto startPosition = Vec2 { i, cellInd - destroyedCellCount };
-            auto newCellType = GetRandomCell().Type;
+            auto newCellType = GetRandomNumber({});
 
             cellMoveData.push_back(CellMoveData { startPosition, finalPosition, newCellType });
         }

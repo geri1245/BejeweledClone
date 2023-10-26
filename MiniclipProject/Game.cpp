@@ -27,7 +27,7 @@ void Game::RunMainLoop()
         // Don't limit the user input processing frequency
         ProcessEvents();
 
-        _gameWorld->Update(now);
+        _gameWorld->Update();
 
         // Limit the display rate at 120 Hz
         if (now - previous >= FrameTime) {

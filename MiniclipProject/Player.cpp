@@ -22,8 +22,8 @@ Player::Player(InputProcessor& inputProcessor, GameWorld& gameWorld)
             OnMouseDragEnded(position);
         }
     }))
-    , _tileDragCompletedToken(gameWorld.TileDragCompleted.Subscribe([this](Vec2 source, Vec2 destination) {
-        OnTileDragCompleted(source, destination);
+    , _tileDragCompletedToken(gameWorld.TileDragCompleted.Subscribe([this](Vec2 source) {
+        OnTileDragCompleted(source);
     }))
 {
 }
@@ -47,7 +47,7 @@ void Player::OnMouseClicked(Vec2 clickedCoordinates)
     }
 }
 
-void Player::OnTileDragCompleted(Vec2 source, Vec2 destination)
+void Player::OnTileDragCompleted(Vec2 source)
 {
     assert(_selectedCell->Index() == source);
 

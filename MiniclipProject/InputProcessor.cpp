@@ -1,7 +1,7 @@
 #include "InputProcessor.h"
 
 namespace {
-constexpr float mouseDragThresholdSquared = 100.f;
+constexpr float mouseDragThresholdSquared = 4;
 }
 
 void InputProcessor::ProcessKeyEvent(const SDL_Event& keyEvent)

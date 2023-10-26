@@ -37,5 +37,5 @@ private:
     void OnMouseDragMoved(Vec2 position);
     void OnMouseDragEnded(Vec2 position);
     void OnMouseClicked(Vec2 position);
-    void OnTileDragCompleted(Vec2 source, Vec2 destination);
+    void OnTileDragCompleted(Vec2 source);
 };
