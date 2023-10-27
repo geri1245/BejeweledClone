@@ -97,6 +97,7 @@ void Game::HandleButtonClicked(ButtonType button)
     case ButtonType::BestMove:
         break;
     case ButtonType::Quit:
+        _shouldQuit = true;
         break;
     case ButtonType::Classic:
         ToggleIsPlaying();

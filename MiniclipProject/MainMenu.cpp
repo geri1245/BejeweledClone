@@ -48,7 +48,7 @@ MainMenu::MainMenu(const Screen& screen, InputProcessor& inputProcessor)
 void MainMenu::Draw()
 {
     for (const auto& button : _buttons) {
-        _screen->DrawButton(button.Text, button.Position);
+        _screen->DrawButton(button.Text, button.Position, button.Type == _hoveredButton);
     }
 }
 
@@ -63,11 +63,15 @@ void MainMenu::Activate(bool needsResumeButton)
     }
 
     _mouseClickedEventToken = _inputProcessor->MouseClicked.Subscribe([this](Vec2 position) { TryClick(position); });
+    _mouseMovedEventToken = _inputProcessor->MouseMoved.Subscribe([this](Vec2 position) { TryHover(position); });
 }
 
 void MainMenu::Deactivate()
 {
     _mouseClickedEventToken.reset();
+    _mouseMovedEventToken.reset();
+
+    _hoveredButton.reset();
 }
 
 void MainMenu::MakeMenuFromButtonTypes()
@@ -82,11 +86,14 @@ void MainMenu::MakeMenuFromButtonTypes()
     auto buttonXPosition = (screenWidth - ButtonWidth) / 2;
 
     _buttons.reserve(numOfButtons);
+    _buttons.clear();
+
     for (auto buttonType : _buttonTypes) {
         _buttons.push_back(Button {
             buttonType,
             GetTextForButtonType(buttonType),
-            SDL_Rect { buttonXPosition, buttonYPosition, ButtonWidth, ButtonHeight } });
+            SDL_Rect { buttonXPosition, buttonYPosition, ButtonWidth, ButtonHeight },
+        });
 
         buttonYPosition += (ButtonHeight + ButtonSpacing);
     }
@@ -97,6 +104,17 @@ void MainMenu::TryClick(Vec2 position)
     for (const auto& button : _buttons) {
         if (Contains(button.Position, position)) {
             ButtonClicked.Invoke(button.Type);
+        }
+    }
+}
+
+void MainMenu::TryHover(Vec2 position)
+{
+    _hoveredButton.reset();
+
+    for (const auto& button : _buttons) {
+        if (Contains(button.Position, position)) {
+            _hoveredButton = button.Type;
         }
     }
 }

@@ -41,7 +41,10 @@ private:
     std::vector<ButtonType> _buttonTypes;
 
     std::unique_ptr<EventToken> _mouseClickedEventToken;
+    std::unique_ptr<EventToken> _mouseMovedEventToken;
+    std::optional<ButtonType> _hoveredButton;
 
     void MakeMenuFromButtonTypes();
     void TryClick(Vec2 position);
+    void TryHover(Vec2 position);
 };

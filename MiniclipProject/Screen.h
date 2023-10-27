@@ -29,7 +29,7 @@ public:
     void DrawTexture(const Texture& texture, const SDL_Rect* sourceRect, const SDL_Rect* destRect) const;
     void Present() const;
 
-    void DrawButton(const std::string& text, const SDL_Rect& coords) const;
+    void DrawButton(const std::string& text, const SDL_Rect& coords, bool isHovered) const;
 
     Texture LoadImage(const std::string& filePath) const;
 
@@ -49,5 +49,5 @@ private:
     bool Initialize();
     bool LoadAssets();
 
-    void DrawText(const std::string& text, const SDL_Rect& textRect, bool isBold = false) const;
+    void DrawText(const std::string& text, const SDL_Rect& textRect, bool isBold = false, SDL_Color color = { 255, 255, 255 }) const;
 };

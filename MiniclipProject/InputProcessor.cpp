@@ -35,6 +35,8 @@ void InputProcessor::ProcessMouseEvent(const SDL_Event& mouseEvent)
                 }
             }
         }
+
+        MouseMoved.Invoke(Vec2 { mouseEvent.button.x, mouseEvent.button.y });
     } break;
     case SDL_MOUSEBUTTONUP: {
         if (mouseEvent.button.button == SDL_BUTTON_LEFT) {

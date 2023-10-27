@@ -20,6 +20,7 @@ public:
     Event<std::function<void(Vec2 position)>> MouseDragMoved;
     Event<std::function<void(Vec2 position)>> MouseDragEnded;
     Event<std::function<void(Vec2 position)>> MouseClicked;
+    Event<std::function<void(Vec2 position)>> MouseMoved;
 
     Event<std::function<void(Key key)>> KeyPressed;
 

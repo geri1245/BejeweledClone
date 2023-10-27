@@ -140,11 +140,10 @@ void Screen::Present() const
     SDL_RenderPresent(_renderer);
 }
 
-void Screen::DrawText(const std::string& text, const SDL_Rect& textRect, bool isBold) const
+void Screen::DrawText(const std::string& text, const SDL_Rect& textRect, bool isBold, SDL_Color color) const
 {
     TTF_Font* font = isBold ? _boldFont : _regularFont;
-    SDL_Color textColor { 255, 255, 255 };
-    SDL_Surface* textSurface = TTF_RenderText_Solid(font, text.c_str(), textColor);
+    SDL_Surface* textSurface = TTF_RenderText_Solid(font, text.c_str(), color);
     if (!textSurface) {
         std::cerr << "Something went wrong: " << TTF_GetError() << std::endl;
     }
@@ -170,10 +169,12 @@ void Screen::DrawText(const std::string& text, const SDL_Rect& textRect, bool is
     SDL_DestroyTexture(textTexture);
 }
 
-void Screen::DrawButton(const std::string& text, const SDL_Rect& coords) const
+void Screen::DrawButton(const std::string& text, const SDL_Rect& coords, bool isHovered) const
 {
     DrawTexture(_menuButton, nullptr, &coords);
-    DrawText(text, coords, true);
+
+    auto textColor = isHovered ? SDL_Color { 200, 200, 200 } : SDL_Color { 255, 255, 255 };
+    DrawText(text, coords, true, textColor);
 }
 
 Texture Screen::LoadImage(const std::string& filePath) const
