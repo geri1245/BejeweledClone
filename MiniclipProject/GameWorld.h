@@ -36,8 +36,11 @@ public:
 
     GameWorld(int rowCount, int colCount, int tileKindCount, Screen& screen);
 
+    void Activate();
+    void Deactivate();
+
     void Draw();
-    void Update();
+    void Update(uint64_t deltaTimeMs);
     bool IsInteractionEnabled() const;
 
     void SetActiveCell(std::optional<Vec2> index, Vec2 offset = Vec2 { 0, 0 });
@@ -47,49 +50,67 @@ public:
     std::optional<Vec2> GetTileIndicesAtPoint(Vec2 position);
 
 private:
-    struct CellMoveData {
+    enum class EasingFunction {
+        EaseOutBounce,
+        EaseInCubic,
+    };
+
+    struct CellAnimationMoveData {
         Vec2 StartingPosition;
         Vec2 FinalPosition;
         int CellType;
         std::optional<Vec2> StartPositionOverride;
     };
 
-    struct CellDestructionData {
+    struct CellAnimationDestructionData {
         Vec2 CellIndex;
         int CellType;
     };
 
     struct AnimationState {
-        std::variant<std::vector<CellMoveData>, std::vector<CellDestructionData>> AnimationData;
+        std::variant<std::vector<CellAnimationMoveData>, std::vector<CellAnimationDestructionData>> AnimationData;
         std::function<void()> Completion;
-        uint64_t AnimationStartTime = 0;
+        uint64_t AnimationTimePassed = 0;
         double AnimationDuration = 0;
         double AnimationProgress = 0.0;
         Cell::CellState FinalCellState = Cell::CellState::Normal;
+        EasingFunction EasingFun = EasingFunction::EaseInCubic;
     };
 
     struct ActiveCellState {
         Vec2 Index;
         Vec2 Offset;
-        uint64_t AnimationStartTime = 0;
+        uint64_t AnimationTimePassed = 0;
+    };
+
+    struct CellDestructionData {
+        CellDestructionData(std::vector<Vec2>&& destroyedCells, int highestRowCombo, int highestColCombo);
+
+        std::vector<Vec2> DestroyedCells;
+        int HighestRowCombo;
+        int HighestColumnCombo;
     };
 
     static constexpr int TileSize = 70; // The provided assets have this size, so for now just use it
     static constexpr int DragOffsetSuccessThreshold = int(TileSize * 0.8);
     static constexpr double CellSwitchAnimationDurationMs = 200.0;
     static constexpr double CellDestroyAnimationDurationMs = 400.0;
-    static constexpr double CellFallAnimationDurationMs = 600.0;
+    static constexpr double BaseCellFallAnimationDurationMs = 800.0;
 
     Cell& At(Vec2 indices);
     const Cell& At(Vec2 indices) const;
 
-    int GetRandomNumber(const std::array<int, 2>& excluding);
+    int GetRandomNumber(const std::array<int, 2>& excluding = { -1, -1 });
     Cell GenerateCellForIndex(int i, int j);
 
-    std::vector<Vec2> GetCellsToDestroyFromCurrentState() const;
+    CellDestructionData GetCellsToDestroyFromCurrentState() const;
     void UpdateBoardState();
-    void UpdateBoardState(std::vector<Vec2>&& cellsToRemove);
-    void MoveCellsAnimated(std::vector<CellMoveData>&& moveData, double animationTime, std::function<void()> completion);
+    void UpdateBoardState(CellDestructionData&& cellsToRemove);
+    void MoveCellsAnimated(
+        std::vector<CellAnimationMoveData>&& moveData,
+        double animationDuration,
+        std::function<void()> completion,
+        EasingFunction easingFun = EasingFunction::EaseInCubic);
     void DestroyCellsAnimated(std::vector<Vec2>&& cellsToDestroy, double animationTime, std::function<void()> completion);
     void MoveDownCells();
 
@@ -98,6 +119,7 @@ private:
     // The board is stored in a column major order. Columns are growing from left to right. Rows are growing from top to bottom.
     GameBoard _gameBoard;
     Screen* _screen = nullptr;
+    bool _isActive = false;
 
     std::random_device _randomDevice;
     std::mt19937 _randomEngine;

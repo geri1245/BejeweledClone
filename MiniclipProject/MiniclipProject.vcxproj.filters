@@ -41,6 +41,15 @@
     <ClCompile Include="SpriteAnimation.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
+    <ClCompile Include="GameState.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="MainMenu.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="Texture.cpp">
+      <Filter>Source Files\Library</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="Screen.h">
@@ -66,6 +75,18 @@
     </ClInclude>
     <ClInclude Include="SpriteAnimation.h">
       <Filter>Source Files</Filter>
+    </ClInclude>
+    <ClInclude Include="GameState.h">
+      <Filter>Source Files</Filter>
+    </ClInclude>
+    <ClInclude Include="MainMenu.h">
+      <Filter>Source Files</Filter>
+    </ClInclude>
+    <ClInclude Include="Texture.h">
+      <Filter>Source Files\Library</Filter>
+    </ClInclude>
+    <ClInclude Include="Error.h">
+      <Filter>Source Files\Library</Filter>
     </ClInclude>
   </ItemGroup>
   <ItemGroup>

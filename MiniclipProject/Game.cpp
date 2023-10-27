@@ -14,7 +14,13 @@ Game::Game()
     }
 
     _gameWorld = std::make_unique<GameWorld>(8, 8, 5, *_screen);
+    _menu = std::make_unique<MainMenu>(*_screen, *_inputProcessor);
     _player = std::make_unique<Player>(*_inputProcessor, *_gameWorld);
+
+    _keyPressedToken = _inputProcessor->KeyPressed.Subscribe([this](Key key) { HandleKeyPress(key); });
+    _mouseClickedToken = _menu->ButtonClicked.Subscribe([this](ButtonType button) { HandleButtonClicked(button); });
+
+    _menu->Activate(false);
 }
 
 void Game::RunMainLoop()
@@ -23,22 +29,30 @@ void Game::RunMainLoop()
 
     while (!_shouldQuit) {
         auto now = SDL_GetTicks64();
+        auto delta = now - previous;
 
-        // Don't limit the user input processing frequency
         ProcessEvents();
 
-        _gameWorld->Update();
+        _screen->BeginFrame();
 
-        // Limit the display rate at 120 Hz
-        if (now - previous >= FrameTime) {
-            _screen->BeginFrame();
+        switch (_gameState) {
+        case Game::GameState::Paused: {
+            _menu->Draw();
+        } break;
+        case Game::GameState::Playing: {
+            _gameWorld->Update(delta);
 
             _gameWorld->Draw();
-
-            _screen->Present();
-
-            previous = SDL_GetTicks64();
+        } break;
         }
+
+        _screen->Present();
+
+        if (delta <= FrameTime) {
+            SDL_Delay(uint32_t(FrameTime - delta));
+        }
+
+        previous = now;
     }
 }
 
@@ -62,5 +76,48 @@ void Game::ProcessEvents()
         default:
             break;
         }
+    }
+}
+
+void Game::HandleKeyPress(Key key)
+{
+    switch (key) {
+    case Key::Escape: {
+        ToggleIsPlaying();
+    } break;
+    }
+}
+
+void Game::HandleButtonClicked(ButtonType button)
+{
+    switch (button) {
+    case ButtonType::Resume:
+        ToggleIsPlaying();
+        break;
+    case ButtonType::BestMove:
+        break;
+    case ButtonType::Quit:
+        break;
+    case ButtonType::Classic:
+        ToggleIsPlaying();
+        break;
+    case ButtonType::QuickDeath:
+        break;
+    }
+}
+
+void Game::ToggleIsPlaying()
+{
+    _gameState = (_gameState == GameState::Paused) ? GameState::Playing : GameState::Paused;
+
+    switch (_gameState) {
+    case Game::GameState::Paused: {
+        _gameWorld->Deactivate();
+        _menu->Activate(true);
+    } break;
+    case Game::GameState::Playing: {
+        _gameWorld->Activate();
+        _menu->Deactivate();
+    } break;
     }
 }

@@ -71,20 +71,20 @@
   </ImportGroup>
   <PropertyGroup Label="UserMacros" />
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">
-    <IncludePath>$(SolutionDir)\SDL\include;$(SolutionDir)\SDLImage\include</IncludePath>
-    <LibraryPath>$(SolutionDir)\SDL\lib\$(PlatformShortName)\;$(SolutionDir)\SDLImage\lib\$(PlatformShortName)\;$(LibraryPath)</LibraryPath>
+    <IncludePath>$(SolutionDir)\SDL\include;$(SolutionDir)\SDLImage\include;$(SolutionDir)\SDLTTF\include</IncludePath>
+    <LibraryPath>$(SolutionDir)\SDL\lib\$(PlatformShortName)\;$(SolutionDir)\SDLImage\lib\$(PlatformShortName)\;$(SolutionDir)\SDLTTF\lib\$(PlatformShortName)\;$(LibraryPath)</LibraryPath>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">
-    <LibraryPath>$(SolutionDir)\SDL\lib\$(PlatformShortName)\;$(SolutionDir)\SDLImage\lib\$(PlatformShortName)\;$(LibraryPath)</LibraryPath>
-    <IncludePath>$(SolutionDir)\SDL\include;$(SolutionDir)\SDLImage\include</IncludePath>
+    <LibraryPath>$(SolutionDir)\SDL\lib\$(PlatformShortName)\;$(SolutionDir)\SDLImage\lib\$(PlatformShortName)\;$(SolutionDir)\SDLTTF\lib\$(PlatformShortName)\;$(LibraryPath)</LibraryPath>
+    <IncludePath>$(SolutionDir)\SDL\include;$(SolutionDir)\SDLImage\include;$(SolutionDir)\SDLTTF\include</IncludePath>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">
-    <LibraryPath>$(SolutionDir)\SDL\lib\$(PlatformShortName)\;$(SolutionDir)\SDLImage\lib\$(PlatformShortName)\;$(LibraryPath)</LibraryPath>
-    <IncludePath>$(SolutionDir)\SDL\include;$(SolutionDir)\SDLImage\include</IncludePath>
+    <LibraryPath>$(SolutionDir)\SDL\lib\$(PlatformShortName)\;$(SolutionDir)\SDLImage\lib\$(PlatformShortName)\;$(SolutionDir)\SDLTTF\lib\$(PlatformShortName)\;$(LibraryPath)</LibraryPath>
+    <IncludePath>$(SolutionDir)\SDL\include;$(SolutionDir)\SDLImage\include;$(SolutionDir)\SDLTTF\include</IncludePath>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|x64'">
-    <LibraryPath>$(SolutionDir)\SDL\lib\$(PlatformShortName)\;$(SolutionDir)\SDLImage\lib\$(PlatformShortName)\;$(LibraryPath)</LibraryPath>
-    <IncludePath>$(SolutionDir)\SDL\include;$(SolutionDir)\SDLImage\include</IncludePath>
+    <LibraryPath>$(SolutionDir)\SDL\lib\$(PlatformShortName)\;$(SolutionDir)\SDLImage\lib\$(PlatformShortName)\;$(SolutionDir)\SDLTTF\lib\$(PlatformShortName)\;$(LibraryPath)</LibraryPath>
+    <IncludePath>$(SolutionDir)\SDL\include;$(SolutionDir)\SDLImage\include;$(SolutionDir)\SDLTTF\include</IncludePath>
   </PropertyGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">
     <ClCompile>
@@ -97,7 +97,7 @@
     <Link>
       <SubSystem>Windows</SubSystem>
       <GenerateDebugInformation>true</GenerateDebugInformation>
-      <AdditionalDependencies>SDL2.lib;SDL2main.lib;SDL2_image.lib;%(AdditionalDependencies)</AdditionalDependencies>
+      <AdditionalDependencies>SDL2.lib;SDL2main.lib;SDL2_image.lib;SDL2_ttf.lib;%(AdditionalDependencies)</AdditionalDependencies>
     </Link>
     <PostBuildEvent>
       <Command>Powershell.exe -NoProfile -File CopyDependencies.ps1 -ProjectDir $(ProjectDir) -TargetDir $(TargetDir) -PlatformShortName $(PlatformShortName)</Command>
@@ -118,7 +118,7 @@
       <EnableCOMDATFolding>true</EnableCOMDATFolding>
       <OptimizeReferences>true</OptimizeReferences>
       <GenerateDebugInformation>true</GenerateDebugInformation>
-      <AdditionalDependencies>SDL2.lib;SDL2main.lib;SDL2_image.lib;%(AdditionalDependencies)</AdditionalDependencies>
+      <AdditionalDependencies>SDL2.lib;SDL2main.lib;SDL2_image.lib;SDL2_ttf.lib;%(AdditionalDependencies)</AdditionalDependencies>
     </Link>
     <PostBuildEvent>
       <Command>Powershell.exe -NoProfile -File CopyDependencies.ps1 -ProjectDir $(ProjectDir) -TargetDir $(TargetDir) -PlatformShortName $(PlatformShortName)</Command>
@@ -135,7 +135,7 @@
     <Link>
       <SubSystem>Windows</SubSystem>
       <GenerateDebugInformation>true</GenerateDebugInformation>
-      <AdditionalDependencies>SDL2.lib;SDL2main.lib;SDL2_image.lib;%(AdditionalDependencies)</AdditionalDependencies>
+      <AdditionalDependencies>SDL2.lib;SDL2main.lib;SDL2_image.lib;SDL2_ttf.lib;%(AdditionalDependencies)</AdditionalDependencies>
     </Link>
     <PostBuildEvent>
       <Command>Powershell.exe -NoProfile -File CopyDependencies.ps1 -ProjectDir $(ProjectDir) -TargetDir $(TargetDir) -PlatformShortName $(PlatformShortName)</Command>
@@ -156,7 +156,7 @@
       <EnableCOMDATFolding>true</EnableCOMDATFolding>
       <OptimizeReferences>true</OptimizeReferences>
       <GenerateDebugInformation>true</GenerateDebugInformation>
-      <AdditionalDependencies>SDL2.lib;SDL2main.lib;SDL2_image.lib;%(AdditionalDependencies)</AdditionalDependencies>
+      <AdditionalDependencies>SDL2.lib;SDL2main.lib;SDL2_image.lib;SDL2_ttf.lib;%(AdditionalDependencies)</AdditionalDependencies>
     </Link>
     <PostBuildEvent>
       <Command>Powershell.exe -NoProfile -File CopyDependencies.ps1 -ProjectDir $(ProjectDir) -TargetDir $(TargetDir) -PlatformShortName $(PlatformShortName)</Command>
@@ -164,21 +164,28 @@
   </ItemDefinitionGroup>
   <ItemGroup>
     <ClCompile Include="Game.cpp" />
+    <ClCompile Include="GameState.cpp" />
     <ClCompile Include="GameWorld.cpp" />
     <ClCompile Include="InputProcessor.cpp" />
+    <ClCompile Include="MainMenu.cpp" />
     <ClCompile Include="Player.cpp" />
     <ClCompile Include="SpriteAnimation.cpp" />
+    <ClCompile Include="Texture.cpp" />
     <ClCompile Include="Vec2.cpp" />
     <ClCompile Include="MiniclipProject.cpp" />
     <ClCompile Include="Screen.cpp" />
   </ItemGroup>
   <ItemGroup>
+    <ClInclude Include="Error.h" />
     <ClInclude Include="Event.h" />
     <ClInclude Include="Game.h" />
+    <ClInclude Include="GameState.h" />
     <ClInclude Include="GameWorld.h" />
     <ClInclude Include="InputProcessor.h" />
+    <ClInclude Include="MainMenu.h" />
     <ClInclude Include="Player.h" />
     <ClInclude Include="SpriteAnimation.h" />
+    <ClInclude Include="Texture.h" />
     <ClInclude Include="Vec2.h" />
     <ClInclude Include="Screen.h" />
   </ItemGroup>

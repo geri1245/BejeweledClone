@@ -36,7 +36,7 @@ Cell GameWorld::GenerateCellForIndex(int i, int j)
         excludedNumbers[0] = _gameBoard[i - 1][j].Type;
     }
     if (j > 1 && _gameBoard[i][j - 1].Type == _gameBoard[i][j - 2].Type) {
-        excludedNumbers[0] = _gameBoard[i][j - 1].Type;
+        excludedNumbers[1] = _gameBoard[i][j - 1].Type;
     }
 
     return Cell(GetRandomNumber(excludedNumbers));
@@ -61,6 +61,16 @@ GameWorld::GameWorld(int rowCount, int colCount, int tileKindCount, Screen& scre
     }
 }
 
+void GameWorld::Activate()
+{
+    _isActive = true;
+}
+
+void GameWorld::Deactivate()
+{
+    _isActive = false;
+}
+
 void GameWorld::Draw()
 {
     for (int i = 0; i < _gameBoard.size(); ++i) {
@@ -73,10 +83,8 @@ void GameWorld::Draw()
     }
 
     if (_activeCellState) {
-        auto now = SDL_GetTicks64();
-
         // Make a periodic function with a period of 1 second and in the range [0, 0.2]
-        auto scaleDiff = (sin((now - _activeCellState->AnimationStartTime) / 1000.f * 2 * M_PI)) * 0.1;
+        auto scaleDiff = (sin(_activeCellState->AnimationTimePassed / 1000.f * 2 * M_PI)) * 0.1;
         auto newSize = TileSize * (1 + scaleDiff);
         auto halfDiff = int((newSize - TileSize) / 2.0);
 
@@ -88,33 +96,32 @@ void GameWorld::Draw()
     }
 
     if (_animationState) {
-        if (std::holds_alternative<std::vector<CellMoveData>>(_animationState->AnimationData)) {
-            auto& animationData = std::get<std::vector<CellMoveData>>(_animationState->AnimationData);
+        if (std::holds_alternative<std::vector<CellAnimationMoveData>>(_animationState->AnimationData)) {
+            auto& animationData = std::get<std::vector<CellAnimationMoveData>>(_animationState->AnimationData);
             for (const auto& [startPosition, endPosition, cellType, startPositionOverride] : animationData) {
                 auto realStartPosition = startPositionOverride.value_or(startPosition);
                 _screen->DrawCell(realStartPosition.Lerp(endPosition, _animationState->AnimationProgress), cellType, TileSize, TileSize);
             }
-        } else if (std::holds_alternative<std::vector<CellDestructionData>>(_animationState->AnimationData)) {
-            auto& animationData = std::get<std::vector<CellDestructionData>>(_animationState->AnimationData);
+        } else if (std::holds_alternative<std::vector<CellAnimationDestructionData>>(_animationState->AnimationData)) {
+            auto& animationData = std::get<std::vector<CellAnimationDestructionData>>(_animationState->AnimationData);
             for (const auto& [cellIndex, cellType] : animationData) {
                 double newSize = (1 - _animationState->AnimationProgress) * TileSize;
                 auto halfDiff = int((TileSize - newSize) / 2);
                 auto offset = Vec2 { halfDiff, halfDiff };
 
                 _screen->DrawCell(cellIndex * TileSize + Vec2 { halfDiff, halfDiff }, cellType, TileSize, int(newSize));
-                //_screen->DrawDestroyAnimation(cellIndex * TileSize + Vec2 { TileSize, TileSize } / 2 - offset, TileSize - newSize, _animationState->AnimationProgress);
                 _screen->DrawDestroyAnimation(cellIndex * TileSize, TileSize, _animationState->AnimationProgress);
             }
         }
     }
 }
 
-void GameWorld::Update()
+void GameWorld::Update(uint64_t deltaTimeMs)
 {
-    auto now = SDL_GetTicks64();
-
     if (_animationState) {
-        double rawProgress = (now - _animationState->AnimationStartTime) / _animationState->AnimationDuration;
+        _animationState->AnimationTimePassed += deltaTimeMs;
+
+        double rawProgress = _animationState->AnimationTimePassed / _animationState->AnimationDuration;
 
         if (rawProgress > 1.0) {
             auto completion = std::move(_animationState->Completion);
@@ -133,14 +140,43 @@ void GameWorld::Update()
                 completion();
             }
         } else {
-            _animationState->AnimationProgress = pow(rawProgress, 3);
+            switch (_animationState->EasingFun) {
+            case EasingFunction::EaseInCubic: {
+                _animationState->AnimationProgress = pow(rawProgress, 3);
+            } break;
+            case EasingFunction::EaseOutBounce: {
+                // Taken from https://easings.net/#easeOutBounce
+                static const double n1 = 7.5625;
+                static const double d1 = 2.75;
+                double x = rawProgress;
+                double animationProgress;
+
+                if (x < 1 / d1) {
+                    animationProgress = n1 * x * x;
+                } else if (x < 2 / d1) {
+                    x -= 1.5 / d1;
+                    animationProgress = n1 * x * x + 0.75;
+                } else if (x < 2.5 / d1) {
+                    x -= 2.25 / d1;
+                    animationProgress = n1 * x * x + 0.9375;
+                } else {
+                    x -= 2.625 / d1;
+                    animationProgress = n1 * x * x + 0.984375;
+                }
+                _animationState->AnimationProgress = animationProgress;
+            } break;
+            }
         }
+    }
+
+    if (_activeCellState) {
+        _activeCellState->AnimationTimePassed += deltaTimeMs;
     }
 }
 
 bool GameWorld::IsInteractionEnabled() const
 {
-    return !_animationState.has_value();
+    return _isActive && !_animationState.has_value();
 }
 
 void GameWorld::SetActiveCell(std::optional<Vec2> index, Vec2 offset)
@@ -163,7 +199,7 @@ void GameWorld::SetActiveCell(std::optional<Vec2> index, Vec2 offset)
                 _activeCellState->Offset = offset;
             } else {
                 _activeCellState.emplace(
-                    *index, offset, SDL_GetTicks64());
+                    *index, offset, 0);
                 At(*index).State = Cell::CellState::Active;
             }
         }
@@ -174,7 +210,7 @@ void GameWorld::SetActiveCell(std::optional<Vec2> index, Vec2 offset)
                 At(activeIndex).State = Cell::CellState::Normal;
 
                 if (offset != Vec2 { 0, 0 }) {
-                    MoveCellsAnimated({ CellMoveData { Vec2 {},
+                    MoveCellsAnimated({ CellAnimationMoveData { Vec2 {},
                                           activeIndex,
                                           At(activeIndex).Type,
                                           activeIndex * TileSize + _activeCellState->Offset } },
@@ -207,11 +243,11 @@ bool GameWorld::TrySwitchCells(Vec2 lhs, Vec2 rhs, bool isDraggedCellTheSource)
         At(lhs) = At(rhs);
         At(rhs) = tmp;
 
-        if (!cellsToDestroy.empty()) {
+        if (!cellsToDestroy.DestroyedCells.empty()) {
             MoveCellsAnimated(
                 {
-                    CellMoveData { lhs, rhs, At(lhs).Type, isDraggedCellTheSource ? _activeCellState->Index * TileSize + _activeCellState->Offset : std::optional<Vec2>() },
-                    CellMoveData { rhs, lhs, At(rhs).Type, std::nullopt },
+                    CellAnimationMoveData { lhs, rhs, At(lhs).Type, isDraggedCellTheSource ? _activeCellState->Index * TileSize + _activeCellState->Offset : std::optional<Vec2>() },
+                    CellAnimationMoveData { rhs, lhs, At(rhs).Type, std::nullopt },
                 },
                 CellSwitchAnimationDurationMs, [this]() { UpdateBoardState(); });
 
@@ -219,7 +255,7 @@ bool GameWorld::TrySwitchCells(Vec2 lhs, Vec2 rhs, bool isDraggedCellTheSource)
         } else if (_activeCellState) { // Just move back the moved cell to its original position
             // This will only be invoked if we are dragging a cell, otherwise activeCellState is already reset
             auto activeIndex = _activeCellState->Index;
-            MoveCellsAnimated({ CellMoveData { Vec2 {},
+            MoveCellsAnimated({ CellAnimationMoveData { Vec2 {},
                                   activeIndex,
                                   At(activeIndex).Type,
                                   activeIndex * TileSize + _activeCellState->Offset } },
@@ -257,7 +293,7 @@ const Cell& GameWorld::At(Vec2 indices) const
     return _gameBoard[indices.x][indices.y];
 }
 
-std::vector<Vec2> GameWorld::GetCellsToDestroyFromCurrentState() const
+GameWorld::CellDestructionData GameWorld::GetCellsToDestroyFromCurrentState() const
 {
     std::vector<Vec2> cellsToRemove;
 
@@ -308,20 +344,18 @@ std::vector<Vec2> GameWorld::GetCellsToDestroyFromCurrentState() const
         cellsToRemove.erase(std::unique(cellsToRemove.begin(), cellsToRemove.end()), cellsToRemove.end());
     }
 
-    return cellsToRemove;
+    return CellDestructionData(std::move(cellsToRemove), 3, 3);
 }
 
-void GameWorld::UpdateBoardState(std::vector<Vec2>&& cellsToRemove)
+void GameWorld::UpdateBoardState(CellDestructionData&& cellDestructionData)
 {
+    const auto& cellsToRemove = cellDestructionData.DestroyedCells;
     if (!cellsToRemove.empty()) {
-        std::sort(cellsToRemove.begin(), cellsToRemove.end(), std::greater<Vec2>());
-        cellsToRemove.erase(std::unique(cellsToRemove.begin(), cellsToRemove.end()), cellsToRemove.end());
-
         for (auto& cell : cellsToRemove) {
             At(cell).Destroy();
         }
 
-        DestroyCellsAnimated(std::move(cellsToRemove), CellDestroyAnimationDurationMs, [this]() { MoveDownCells(); });
+        DestroyCellsAnimated(std::move(cellDestructionData.DestroyedCells), CellDestroyAnimationDurationMs, [this]() { MoveDownCells(); });
     }
 }
 
@@ -332,7 +366,11 @@ void GameWorld::UpdateBoardState()
     UpdateBoardState(std::move(cellsToRemove));
 }
 
-void GameWorld::MoveCellsAnimated(std::vector<CellMoveData>&& moveData, double animationDuration, std::function<void()> completion)
+void GameWorld::MoveCellsAnimated(
+    std::vector<CellAnimationMoveData>&& moveData,
+    double animationDuration,
+    std::function<void()> completion,
+    EasingFunction easingFun)
 {
     assert(!_animationState);
     _animationState.emplace();
@@ -348,28 +386,24 @@ void GameWorld::MoveCellsAnimated(std::vector<CellMoveData>&& moveData, double a
 
     _animationState->AnimationData = std::move(moveData);
 
-    _animationState->AnimationStartTime = SDL_GetTicks64();
-    _animationState->AnimationProgress = 0.0;
     _animationState->AnimationDuration = animationDuration;
     _animationState->Completion = std::move(completion);
-    _animationState->FinalCellState = Cell::CellState::Normal;
+    _animationState->EasingFun = easingFun;
 }
 
 void GameWorld::DestroyCellsAnimated(std::vector<Vec2>&& cellsToDestroy, double animationTime, std::function<void()> completion)
 {
     _animationState.emplace();
 
-    std::vector<CellDestructionData> animationData;
+    std::vector<CellAnimationDestructionData> animationData;
     animationData.reserve(cellsToDestroy.size());
 
     for (Vec2 cell : cellsToDestroy) {
-        animationData.push_back(CellDestructionData { cell, At(cell).Type });
+        animationData.push_back(CellAnimationDestructionData { cell, At(cell).Type });
     }
 
     _animationState->AnimationData = std::move(animationData);
 
-    _animationState->AnimationStartTime = SDL_GetTicks64();
-    _animationState->AnimationProgress = 0.0;
     _animationState->AnimationDuration = CellDestroyAnimationDurationMs;
     _animationState->Completion = std::move(completion);
     _animationState->FinalCellState = Cell::CellState::Destroyed;
@@ -377,7 +411,7 @@ void GameWorld::DestroyCellsAnimated(std::vector<Vec2>&& cellsToDestroy, double 
 
 void GameWorld::MoveDownCells()
 {
-    std::vector<CellMoveData> cellMoveData;
+    std::vector<CellAnimationMoveData> cellMoveData;
 
     // Update the position of every cell that is above a destroyed cell and add them to be animated
     for (int i = 0; i < ColCount; ++i) {
@@ -392,7 +426,7 @@ void GameWorld::MoveDownCells()
                 auto startPosition = Vec2 { i, j };
                 auto finalPosition = Vec2 { i, newRow };
 
-                cellMoveData.push_back(CellMoveData { startPosition, finalPosition, At(startPosition).Type });
+                cellMoveData.push_back(CellAnimationMoveData { startPosition, finalPosition, At(startPosition).Type });
 
                 At(startPosition).State = Cell::CellState::Destroyed;
             }
@@ -402,16 +436,27 @@ void GameWorld::MoveDownCells()
         for (int cellInd = 0; cellInd < destroyedCellCount; ++cellInd) {
             auto finalPosition = Vec2 { i, cellInd };
             auto startPosition = Vec2 { i, cellInd - destroyedCellCount };
-            auto newCellType = GetRandomNumber({});
+            auto newCellType = GetRandomNumber();
 
-            cellMoveData.push_back(CellMoveData { startPosition, finalPosition, newCellType });
+            cellMoveData.push_back(CellAnimationMoveData { startPosition, finalPosition, newCellType });
         }
     }
 
-    MoveCellsAnimated(std::move(cellMoveData), CellFallAnimationDurationMs, [this]() { UpdateBoardState(); });
+    MoveCellsAnimated(
+        std::move(cellMoveData),
+        BaseCellFallAnimationDurationMs,
+        [this]() { UpdateBoardState(); },
+        EasingFunction::EaseOutBounce);
 }
 
 bool GameWorld::IsIndexOnTheBoard(Vec2 index) const
 {
     return !(index.x < 0 || index.x > ColCount - 1 || index.y < 0 || index.y > RowCount - 1);
+}
+
+GameWorld::CellDestructionData::CellDestructionData(std::vector<Vec2>&& destroyedCells, int highestRowCombo, int highestColCombo)
+    : DestroyedCells(std::move(destroyedCells))
+    , HighestRowCombo(highestRowCombo)
+    , HighestColumnCombo(highestColCombo)
+{
 }

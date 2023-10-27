@@ -1,9 +1,11 @@
 #pragma once
 
 #include "SpriteAnimation.h"
+#include "Texture.h"
 #include "Vec2.h"
 
 #include <SDL.h>
+#include <SDL_ttf.h>
 
 #include <memory>
 #include <optional>
@@ -13,31 +15,39 @@
 
 class Screen {
 public:
+    static constexpr int ScreenWidth = 560;
+    static constexpr int ScreenHeight = 560;
+
     static std::unique_ptr<Screen> GetScreen();
     ~Screen();
+
+    void TerminateWithMessage(const std::string& errorText);
 
     void BeginFrame() const;
     void DrawCell(Vec2 coords, int cellType, int sourceSize, int destinationSize) const;
     void DrawDestroyAnimation(Vec2 coords, int size, double progress);
-    void DrawTexture(Vec2 coords, SDL_Texture* texture, SDL_Rect* sourceRect, SDL_Rect* destRect) const;
+    void DrawTexture(const Texture& texture, const SDL_Rect* sourceRect, const SDL_Rect* destRect) const;
     void Present() const;
 
-    SDL_Texture* LoadImage(const std::string& filePath) const;
+    void DrawButton(const std::string& text, const SDL_Rect& coords) const;
+
+    Texture LoadImage(const std::string& filePath) const;
 
 private:
-    bool Initialize();
-    bool LoadAssets();
-
-    static constexpr int ScreenWidth = 560;
-    static constexpr int ScreenHeight = 560;
-    static constexpr int AnimationTime = 5000;
-
     SDL_Window* _window = nullptr;
     SDL_Renderer* _renderer = nullptr;
     SDL_Texture* _renderTarget = nullptr;
 
-    std::vector<SDL_Texture*> _assetImages;
-    SDL_Texture* _backgroundImage = nullptr;
+    std::vector<Texture> _assetImages;
+    Texture _backgroundImage;
+    Texture _menuButton;
+    TTF_Font* _regularFont = nullptr;
+    TTF_Font* _boldFont = nullptr;
 
     std::unique_ptr<SpriteAnimation> _gravityAnimation;
+
+    bool Initialize();
+    bool LoadAssets();
+
+    void DrawText(const std::string& text, const SDL_Rect& textRect, bool isBold = false) const;
 };
