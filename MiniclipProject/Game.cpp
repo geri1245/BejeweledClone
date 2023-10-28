@@ -1,5 +1,6 @@
 #include "Game.h"
 #include "Event.h"
+#include "GameState.h"
 #include "InputProcessor.h"
 
 #include <iostream>
@@ -20,7 +21,7 @@ Game::Game()
     _keyPressedToken = _inputProcessor->KeyPressed.Subscribe([this](Key key) { HandleKeyPress(key); });
     _mouseClickedToken = _menu->ButtonClicked.Subscribe([this](ButtonType button) { HandleButtonClicked(button); });
 
-    _menu->Activate(false);
+    _menu->Activate(false, {});
 }
 
 void Game::RunMainLoop()
@@ -42,7 +43,13 @@ void Game::RunMainLoop()
         case Game::GameState::Playing: {
             _gameWorld->Update(delta);
 
-            _gameWorld->Draw();
+            if (_gameStateObject->IsGameOver()) {
+                auto result = _gameStateObject->GetResult();
+                _gameStateObject.reset();
+                EndGame(false, result);
+            } else {
+                _gameWorld->Draw();
+            }
         } break;
         }
 
@@ -94,31 +101,55 @@ void Game::HandleButtonClicked(ButtonType button)
     case ButtonType::Resume:
         ToggleIsPlaying();
         break;
-    case ButtonType::BestMove:
-        break;
     case ButtonType::Quit:
         _shouldQuit = true;
         break;
-    case ButtonType::Classic:
-        ToggleIsPlaying();
-        break;
-    case ButtonType::QuickDeath:
-        break;
+    case ButtonType::Classic: {
+        ResumeOrStartGame(GameMode::Classic);
+    } break;
+    case ButtonType::QuickDeath: {
+        ResumeOrStartGame(GameMode::QuickDeath);
+    } break;
     }
 }
 
 void Game::ToggleIsPlaying()
 {
-    _gameState = (_gameState == GameState::Paused) ? GameState::Playing : GameState::Paused;
-
     switch (_gameState) {
     case Game::GameState::Paused: {
-        _gameWorld->Deactivate();
-        _menu->Activate(true);
+        ResumeOrStartGame();
     } break;
     case Game::GameState::Playing: {
-        _gameWorld->Activate();
-        _menu->Deactivate();
+        EndGame(true, {});
     } break;
     }
+}
+
+void Game::EndGame(bool menuNeedsResumeButton, const std::vector<std::string>& additionalMenuText)
+{
+    _gameWorld->Deactivate();
+    _menu->Activate(menuNeedsResumeButton, additionalMenuText);
+    _gameState = GameState::Paused;
+}
+
+void Game::ResumeOrStartGame(std::optional<GameMode> gameMode)
+{
+    if (gameMode) {
+        switch (*gameMode) {
+        case GameMode::Classic: {
+            if (auto currentStateObject = dynamic_cast<ClassicGameState*>(_gameStateObject.get()); !currentStateObject || currentStateObject != _gameStateObject.get()) {
+                _gameStateObject = std::make_unique<ClassicGameState>();
+            }
+        } break;
+        case GameMode::QuickDeath: {
+            if (auto currentStateObject = dynamic_cast<QuickDeathGameState*>(_gameStateObject.get()); !currentStateObject || currentStateObject != _gameStateObject.get()) {
+                _gameStateObject = std::make_unique<QuickDeathGameState>();
+            }
+        } break;
+        }
+    }
+
+    _menu->Deactivate();
+    _gameWorld->Activate(*_gameStateObject);
+    _gameState = GameState::Playing;
 }

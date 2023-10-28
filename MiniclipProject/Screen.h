@@ -15,8 +15,8 @@
 
 class Screen {
 public:
-    static constexpr int ScreenWidth = 560;
-    static constexpr int ScreenHeight = 560;
+    static constexpr int ScreenWidth = 1024;
+    static constexpr int ScreenHeight = 768;
 
     static std::unique_ptr<Screen> GetScreen();
     ~Screen();
@@ -30,6 +30,7 @@ public:
     void Present() const;
 
     void DrawButton(const std::string& text, const SDL_Rect& coords, bool isHovered) const;
+    void DrawText(const std::string& text, const SDL_Rect& textRect, bool isBold = false, SDL_Color color = { 255, 255, 255 }) const;
 
     Texture LoadImage(const std::string& filePath) const;
 
@@ -48,6 +49,4 @@ private:
 
     bool Initialize();
     bool LoadAssets();
-
-    void DrawText(const std::string& text, const SDL_Rect& textRect, bool isBold = false, SDL_Color color = { 255, 255, 255 }) const;
 };

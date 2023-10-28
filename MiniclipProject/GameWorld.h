@@ -1,6 +1,7 @@
 #pragma once
 
 #include "Event.h"
+#include "GameState.h"
 #include "Screen.h"
 #include "Vec2.h"
 
@@ -26,6 +27,14 @@ struct Cell {
     CellState State = CellState::Normal;
 };
 
+struct CellDestructionData {
+    CellDestructionData(std::vector<Vec2>&& destroyedCells, int highestRowCombo, int highestColCombo);
+
+    std::vector<Vec2> DestroyedCells;
+    int HighestRowCombo;
+    int HighestColumnCombo;
+};
+
 class GameWorld {
 public:
     using GameBoard = std::vector<std::vector<Cell>>;
@@ -36,7 +45,7 @@ public:
 
     GameWorld(int rowCount, int colCount, int tileKindCount, Screen& screen);
 
-    void Activate();
+    void Activate(IGameState& gameState);
     void Deactivate();
 
     void Draw();
@@ -83,14 +92,6 @@ private:
         uint64_t AnimationTimePassed = 0;
     };
 
-    struct CellDestructionData {
-        CellDestructionData(std::vector<Vec2>&& destroyedCells, int highestRowCombo, int highestColCombo);
-
-        std::vector<Vec2> DestroyedCells;
-        int HighestRowCombo;
-        int HighestColumnCombo;
-    };
-
     static constexpr int TileSize = 70; // The provided assets have this size, so for now just use it
     static constexpr int DragOffsetSuccessThreshold = int(TileSize * 0.8);
     static constexpr double CellSwitchAnimationDurationMs = 200.0;
@@ -102,6 +103,7 @@ private:
 
     int GetRandomNumber(const std::array<int, 2>& excluding = { -1, -1 });
     Cell GenerateCellForIndex(int i, int j);
+    void FillBoard();
 
     CellDestructionData GetCellsToDestroyFromCurrentState() const;
     void UpdateBoardState();
@@ -124,6 +126,8 @@ private:
     std::random_device _randomDevice;
     std::mt19937 _randomEngine;
     std::uniform_int_distribution<int> _randomDistribution;
+
     std::optional<AnimationState> _animationState;
     std::optional<ActiveCellState> _activeCellState;
+    IGameState* _gameState;
 };

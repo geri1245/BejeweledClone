@@ -5,6 +5,11 @@ bool Contains(const SDL_Rect& rect, Vec2 position)
 {
     return position.x >= rect.x && position.y >= rect.y && position.x <= rect.x + rect.w && position.y <= rect.y + rect.h;
 }
+
+int GetCenteredPositionOfElement(int screenWidth, int elementWidth)
+{
+    return (screenWidth - elementWidth) / 2;
+}
 }
 
 namespace {
@@ -13,19 +18,14 @@ std::string GetTextForButtonType(ButtonType buttonType)
     switch (buttonType) {
     case ButtonType::Resume:
         return "Resume Game";
-        break;
-    case ButtonType::BestMove:
-        return "Play Best Move";
-        break;
     case ButtonType::Quit:
         return "Quit Game";
-        break;
     case ButtonType::Classic:
         return "Play Classic";
-        break;
     case ButtonType::QuickDeath:
         return "Play Quick Death";
-        break;
+    case ButtonType::Leaderboard:
+        return "Show Leaderboard";
     }
 
     return "ERROR - STRING NOT FOUND!!!";
@@ -38,7 +38,7 @@ MainMenu::MainMenu(const Screen& screen, InputProcessor& inputProcessor)
     , _buttonTypes {
         ButtonType::Classic,
         ButtonType::QuickDeath,
-        ButtonType::BestMove,
+        ButtonType::Leaderboard,
         ButtonType::Quit,
     }
 {
@@ -50,10 +50,16 @@ void MainMenu::Draw()
     for (const auto& button : _buttons) {
         _screen->DrawButton(button.Text, button.Position, button.Type == _hoveredButton);
     }
+
+    for (const auto& textBlock : _additionalText) {
+        _screen->DrawText(textBlock.Text, textBlock.Position, true);
+    }
 }
 
-void MainMenu::Activate(bool needsResumeButton)
+void MainMenu::Activate(bool needsResumeButton, const std::vector<std::string>& additionalText)
 {
+    MakeTextBlocksFromTexts(additionalText);
+
     if (needsResumeButton && _buttonTypes[0] != ButtonType::Resume) {
         _buttonTypes.insert(_buttonTypes.begin(), ButtonType::Resume);
         MakeMenuFromButtonTypes();
@@ -83,7 +89,7 @@ void MainMenu::MakeMenuFromButtonTypes()
 
     auto menuSize = numOfButtons * ButtonHeight + (numOfButtons - 1) * ButtonSpacing;
     auto buttonYPosition = (screenHeight - menuSize) / 2;
-    auto buttonXPosition = (screenWidth - ButtonWidth) / 2;
+    auto buttonXPosition = GetCenteredPositionOfElement(screenWidth, ButtonWidth);
 
     _buttons.reserve(numOfButtons);
     _buttons.clear();
@@ -96,6 +102,16 @@ void MainMenu::MakeMenuFromButtonTypes()
         });
 
         buttonYPosition += (ButtonHeight + ButtonSpacing);
+    }
+}
+
+void MainMenu::MakeTextBlocksFromTexts(const std::vector<std::string>& additionalText)
+{
+    auto midPoint = GetCenteredPositionOfElement(_screen->ScreenWidth, TextBlockWidth);
+    SDL_Rect textRect { midPoint, 100, TextBlockWidth, ButtonHeight };
+    for (const auto& text : additionalText) {
+        _additionalText.push_back(TextBlock { text, textRect });
+        textRect.y += ButtonHeight + ButtonSpacing;
     }
 }
 

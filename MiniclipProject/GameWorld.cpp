@@ -42,6 +42,20 @@ Cell GameWorld::GenerateCellForIndex(int i, int j)
     return Cell(GetRandomNumber(excludedNumbers));
 }
 
+void GameWorld::FillBoard()
+{
+    _gameBoard.reserve(ColCount);
+    _gameBoard.clear();
+
+    for (int i = 0; i < RowCount; ++i) {
+        auto& column = _gameBoard.emplace_back();
+        column.reserve(RowCount);
+        for (int j = 0; j < RowCount; ++j) {
+            column.push_back(GenerateCellForIndex(i, j));
+        }
+    }
+}
+
 GameWorld::GameWorld(int rowCount, int colCount, int tileKindCount, Screen& screen)
     : RowCount(rowCount)
     , ColCount(colCount)
@@ -50,20 +64,19 @@ GameWorld::GameWorld(int rowCount, int colCount, int tileKindCount, Screen& scre
     , _randomEngine(_randomDevice())
     , _randomDistribution(0, tileKindCount - 1) // Random distribution is inclusive on both ends, so the range [0, n - 1] will contain n possible values
 {
-    _gameBoard.reserve(colCount);
-
-    for (int i = 0; i < rowCount; ++i) {
-        auto& column = _gameBoard.emplace_back();
-        column.reserve(rowCount);
-        for (int j = 0; j < rowCount; ++j) {
-            column.push_back(GenerateCellForIndex(i, j));
-        }
-    }
+    FillBoard();
 }
 
-void GameWorld::Activate()
+void GameWorld::Activate(IGameState& gameState)
 {
     _isActive = true;
+
+    if (_gameState != &gameState) {
+        _gameState = &gameState;
+        _animationState.reset();
+        _activeCellState.reset();
+        FillBoard();
+    }
 }
 
 void GameWorld::Deactivate()
@@ -114,10 +127,19 @@ void GameWorld::Draw()
             }
         }
     }
+
+    auto textLines = _gameState->GetUIText();
+    SDL_Rect rect { 650, 100, 280, 40 };
+    for (const auto& line : textLines) {
+        _screen->DrawText(line, rect, true);
+        rect.y += 60;
+    }
 }
 
 void GameWorld::Update(uint64_t deltaTimeMs)
 {
+    _gameState->Update(int(deltaTimeMs));
+
     if (_animationState) {
         _animationState->AnimationTimePassed += deltaTimeMs;
 
@@ -293,23 +315,26 @@ const Cell& GameWorld::At(Vec2 indices) const
     return _gameBoard[indices.x][indices.y];
 }
 
-GameWorld::CellDestructionData GameWorld::GetCellsToDestroyFromCurrentState() const
+CellDestructionData GameWorld::GetCellsToDestroyFromCurrentState() const
 {
     std::vector<Vec2> cellsToRemove;
 
-    // Check the rows for at least 3 of the same cells next to each other
-    for (int i = 0; i < RowCount; ++i) {
+    int maxColStreak = 0;
+    // Check the columns for at least 3 of the same cells next to each other
+    for (int i = 0; i < ColCount; ++i) {
         int j = 0;
-        while (j < ColCount - 2) {
+        while (j < RowCount - 2) {
             int k = j + 1;
 
             // Keep going until we find a cell that is different from the current one
-            while (k < ColCount && _gameBoard[i][j].Type == _gameBoard[i][k].Type) {
+            while (k < RowCount && _gameBoard[i][j].Type == _gameBoard[i][k].Type) {
                 ++k;
             }
 
             // Check if we have at least 3 of the same cell types next to each other
             if (k - j > 2) {
+                maxColStreak = std::max(maxColStreak, k - j);
+
                 for (int copyInd = j; copyInd < k; ++copyInd) {
                     cellsToRemove.push_back(Vec2 { i, copyInd });
                 }
@@ -319,17 +344,20 @@ GameWorld::CellDestructionData GameWorld::GetCellsToDestroyFromCurrentState() co
         }
     }
 
-    // Exact same logic for the columns as well
-    for (int j = 0; j < ColCount; ++j) {
+    int maxRowStreak = 0;
+    // Exact same logic for the rows as well
+    for (int j = 0; j < RowCount; ++j) {
         int i = 0;
-        while (i < RowCount - 2) {
+        while (i < ColCount - 2) {
             int k = i + 1;
 
-            while (k < RowCount && _gameBoard[i][j].Type == _gameBoard[k][j].Type) {
+            while (k < ColCount && _gameBoard[i][j].Type == _gameBoard[k][j].Type) {
                 ++k;
             }
 
             if (k - i > 2) {
+                maxRowStreak = std::max(maxRowStreak, k - i);
+
                 for (int copyInd = i; copyInd < k; ++copyInd) {
                     cellsToRemove.push_back(Vec2 { copyInd, j });
                 }
@@ -344,7 +372,7 @@ GameWorld::CellDestructionData GameWorld::GetCellsToDestroyFromCurrentState() co
         cellsToRemove.erase(std::unique(cellsToRemove.begin(), cellsToRemove.end()), cellsToRemove.end());
     }
 
-    return CellDestructionData(std::move(cellsToRemove), 3, 3);
+    return CellDestructionData(std::move(cellsToRemove), maxRowStreak, maxColStreak);
 }
 
 void GameWorld::UpdateBoardState(CellDestructionData&& cellDestructionData)
@@ -354,6 +382,8 @@ void GameWorld::UpdateBoardState(CellDestructionData&& cellDestructionData)
         for (auto& cell : cellsToRemove) {
             At(cell).Destroy();
         }
+
+        _gameState->UpdateScore(cellDestructionData);
 
         DestroyCellsAnimated(std::move(cellDestructionData.DestroyedCells), CellDestroyAnimationDurationMs, [this]() { MoveDownCells(); });
     }
@@ -454,7 +484,7 @@ bool GameWorld::IsIndexOnTheBoard(Vec2 index) const
     return !(index.x < 0 || index.x > ColCount - 1 || index.y < 0 || index.y > RowCount - 1);
 }
 
-GameWorld::CellDestructionData::CellDestructionData(std::vector<Vec2>&& destroyedCells, int highestRowCombo, int highestColCombo)
+CellDestructionData::CellDestructionData(std::vector<Vec2>&& destroyedCells, int highestRowCombo, int highestColCombo)
     : DestroyedCells(std::move(destroyedCells))
     , HighestRowCombo(highestRowCombo)
     , HighestColumnCombo(highestColCombo)

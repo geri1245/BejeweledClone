@@ -17,6 +17,11 @@ private:
         Playing,
     };
 
+    enum class GameMode {
+        Classic,
+        QuickDeath,
+    };
+
     static constexpr int DesiredFPS = 60;
     static constexpr int FrameTime = int(1000.f / DesiredFPS);
 
@@ -31,9 +36,12 @@ private:
 
     std::unique_ptr<EventToken> _keyPressedToken;
     std::unique_ptr<EventToken> _mouseClickedToken;
+    std::unique_ptr<IGameState> _gameStateObject;
 
     void ProcessEvents();
     void HandleKeyPress(Key key);
     void HandleButtonClicked(ButtonType button);
     void ToggleIsPlaying();
+    void EndGame(bool menuNeedsResumeButton, const std::vector<std::string>& additionalMenuText);
+    void ResumeOrStartGame(std::optional<GameMode> gameMode = std::nullopt);
 };

@@ -115,7 +115,9 @@ Screen::~Screen()
 
 void Screen::BeginFrame() const
 {
-    SDL_RenderCopy(_renderer, *_backgroundImage, nullptr, nullptr);
+    SDL_RenderClear(_renderer);
+    SDL_Rect entireScreen { 0, 0, ScreenWidth, ScreenHeight };
+    SDL_RenderCopy(_renderer, *_backgroundImage, nullptr, &entireScreen);
 }
 
 void Screen::DrawCell(Vec2 coords, int cellType, int sourceSize, int destinationSize) const
