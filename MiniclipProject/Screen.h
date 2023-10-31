@@ -16,7 +16,7 @@
 class Screen {
 public:
     static constexpr int ScreenWidth = 1024;
-    static constexpr int ScreenHeight = 768;
+    static constexpr int ScreenHeight = 560;
 
     static std::unique_ptr<Screen> GetScreen();
     ~Screen();
@@ -30,7 +30,8 @@ public:
     void Present() const;
 
     void DrawButton(const std::string& text, const SDL_Rect& coords, bool isHovered) const;
-    void DrawText(const std::string& text, const SDL_Rect& textRect, bool isBold = false, SDL_Color color = { 255, 255, 255 }) const;
+    void DrawText(const std::string& text, const SDL_Rect& textRect, bool useLargeFont, SDL_Color color = { 255, 255, 255 }) const;
+    void DrawBackgroundRectangle(const SDL_Rect& rect, SDL_Color color = { 50, 50, 50, 100 }) const;
 
     Texture LoadImage(const std::string& filePath) const;
 
@@ -42,8 +43,8 @@ private:
     std::vector<Texture> _assetImages;
     Texture _backgroundImage;
     Texture _menuButton;
-    TTF_Font* _regularFont = nullptr;
-    TTF_Font* _boldFont = nullptr;
+    TTF_Font* _bigFont = nullptr;
+    TTF_Font* _smallFont = nullptr;
 
     std::unique_ptr<SpriteAnimation> _gravityAnimation;
 

@@ -1,3 +1,6 @@
+#include <algorithm>
+#include <iterator>
+
 #include "MainMenu.h"
 
 namespace {
@@ -26,6 +29,8 @@ std::string GetTextForButtonType(ButtonType buttonType)
         return "Play Quick Death";
     case ButtonType::Leaderboard:
         return "Show Leaderboard";
+    case ButtonType::Back:
+        return "Back";
     }
 
     return "ERROR - STRING NOT FOUND!!!";
@@ -43,22 +48,33 @@ MainMenu::MainMenu(const Screen& screen, InputProcessor& inputProcessor)
     }
 {
     MakeMenuFromButtonTypes();
+    _leaderboardButtons = std::vector<Button> {
+        Button { ButtonType::Back, GetTextForButtonType(ButtonType::Back), SDL_Rect { GetCenteredPositionOfElement(screen.ScreenWidth, ButtonWidth), screen.ScreenHeight - 80, ButtonWidth, ButtonHeight } }
+    };
 }
 
 void MainMenu::Draw()
 {
-    for (const auto& button : _buttons) {
+    for (const auto& button : CurrentButtons()) {
         _screen->DrawButton(button.Text, button.Position, button.Type == _hoveredButton);
     }
 
-    for (const auto& textBlock : _additionalText) {
-        _screen->DrawText(textBlock.Text, textBlock.Position, true);
+    if (_isShowingLeaderboard) {
+        _screen->DrawBackgroundRectangle(_leaderboardBackground);
+        for (const auto& textBlock : _leaderboard) {
+            _screen->DrawText(textBlock.Text, textBlock.Position, false);
+        }
+    } else {
+        for (const auto& textBlock : _additionalText) {
+            _screen->DrawText(textBlock.Text, textBlock.Position, true);
+        }
     }
 }
 
 void MainMenu::Activate(bool needsResumeButton, const std::vector<std::string>& additionalText)
 {
-    MakeTextBlocksFromTexts(additionalText);
+    _additionalText.clear();
+    MakeTextBlocksFromTexts(additionalText, _additionalText, 100, ButtonSpacing, ButtonHeight);
 
     if (needsResumeButton && _buttonTypes[0] != ButtonType::Resume) {
         _buttonTypes.insert(_buttonTypes.begin(), ButtonType::Resume);
@@ -78,6 +94,39 @@ void MainMenu::Deactivate()
     _mouseMovedEventToken.reset();
 
     _hoveredButton.reset();
+}
+
+void MainMenu::ShowLeaderboard(const std::vector<int>& classicHighScores, const std::vector<int>& quickDeathHighScores)
+{
+    _leaderboard.clear();
+    _leaderboard.reserve(12);
+
+    _leaderboard.push_back(TextBlock { "Classic:", SDL_Rect {
+                                                       GetCenteredPositionOfElement(_screen->ScreenWidth, ButtonWidth),
+                                                       50,
+                                                       ButtonWidth,
+                                                       LeaderboardEntryHeight,
+                                                   } });
+
+    int nextYPosition = MakeTextBlocksFromMilliseconds(classicHighScores, _leaderboard, 50 + LeaderboardSpacing + LeaderboardEntryHeight, LeaderboardSpacing);
+
+    _leaderboard.push_back(TextBlock { "Quick death:", SDL_Rect { GetCenteredPositionOfElement(_screen->ScreenWidth, ButtonWidth), nextYPosition, ButtonWidth, LeaderboardEntryHeight } });
+
+    MakeTextBlocksFromMilliseconds(quickDeathHighScores, _leaderboard, nextYPosition + LeaderboardEntryHeight + LeaderboardSpacing, LeaderboardSpacing);
+
+    _leaderboardBackground = SDL_Rect { _leaderboard[0].Position.x - LeaderboardSpacing, _leaderboard[0].Position.y - LeaderboardSpacing, ButtonWidth + 2 * LeaderboardSpacing, int(_leaderboard.size()) * (LeaderboardSpacing + LeaderboardEntryHeight) + LeaderboardSpacing };
+
+    _isShowingLeaderboard = true;
+}
+
+void MainMenu::GoBackFromLeaderboard()
+{
+    _isShowingLeaderboard = false;
+}
+
+const std::vector<MainMenu::Button>& MainMenu::CurrentButtons() const
+{
+    return _isShowingLeaderboard ? _leaderboardButtons : _buttons;
 }
 
 void MainMenu::MakeMenuFromButtonTypes()
@@ -105,21 +154,37 @@ void MainMenu::MakeMenuFromButtonTypes()
     }
 }
 
-void MainMenu::MakeTextBlocksFromTexts(const std::vector<std::string>& additionalText)
+int MainMenu::MakeTextBlocksFromTexts(const std::vector<std::string>& additionalText, std::vector<TextBlock>& resultTexts, int startingYPosition, int spacing, int height)
 {
     auto midPoint = GetCenteredPositionOfElement(_screen->ScreenWidth, TextBlockWidth);
-    SDL_Rect textRect { midPoint, 100, TextBlockWidth, ButtonHeight };
+    SDL_Rect textRect { midPoint, startingYPosition, TextBlockWidth, height };
     for (const auto& text : additionalText) {
-        _additionalText.push_back(TextBlock { text, textRect });
-        textRect.y += ButtonHeight + ButtonSpacing;
+        resultTexts.push_back(TextBlock { text, textRect });
+        textRect.y += height + spacing;
     }
+
+    return textRect.y;
+}
+
+int MainMenu::MakeTextBlocksFromMilliseconds(const std::vector<int>& data, std::vector<TextBlock>& resultTexts, int startingYPosition, int spacing)
+{
+    std::vector<std::string> stringVec;
+    stringVec.reserve(data.size());
+
+    std::transform(data.begin(), data.end(), std::back_inserter(stringVec), [](int num) { return std::to_string(int(num / 1000.0)); });
+    return MakeTextBlocksFromTexts(stringVec, resultTexts, startingYPosition, spacing, LeaderboardEntryHeight);
 }
 
 void MainMenu::TryClick(Vec2 position)
 {
-    for (const auto& button : _buttons) {
+    for (const auto& button : CurrentButtons()) {
         if (Contains(button.Position, position)) {
-            ButtonClicked.Invoke(button.Type);
+            if (button.Type == ButtonType::Back) {
+                // Handle the back button here. Forward everything else
+                GoBackFromLeaderboard();
+            } else {
+                ButtonClicked.Invoke(button.Type);
+            }
         }
     }
 }
@@ -128,7 +193,7 @@ void MainMenu::TryHover(Vec2 position)
 {
     _hoveredButton.reset();
 
-    for (const auto& button : _buttons) {
+    for (const auto& button : CurrentButtons()) {
         if (Contains(button.Position, position)) {
             _hoveredButton = button.Type;
         }

@@ -56,13 +56,14 @@ void GameWorld::FillBoard()
     }
 }
 
-GameWorld::GameWorld(int rowCount, int colCount, int tileKindCount, Screen& screen)
+GameWorld::GameWorld(int rowCount, int colCount, int tileKindCount, Screen& screen, AudioPlayer& audioPlayer)
     : RowCount(rowCount)
     , ColCount(colCount)
     , TileKindCount(tileKindCount)
     , _screen(&screen)
     , _randomEngine(_randomDevice())
     , _randomDistribution(0, tileKindCount - 1) // Random distribution is inclusive on both ends, so the range [0, n - 1] will contain n possible values
+    , _audioPlayer(&audioPlayer)
 {
     FillBoard();
 }
@@ -128,11 +129,20 @@ void GameWorld::Draw()
         }
     }
 
+    static constexpr int spacing = 50;
+    static constexpr int textWidth = 240;
+    static constexpr int textHeight = 40;
+
     auto textLines = _gameState->GetUIText();
-    SDL_Rect rect { 650, 100, 280, 40 };
+    auto textPosition = 560 + (_screen->ScreenWidth - 560 - textWidth) / 2;
+    SDL_Rect textRect { textPosition, 50, textWidth, textHeight };
+    SDL_Rect uIBackgroundRect { textRect.x - spacing, textRect.y - spacing, textRect.w + 2 * spacing, int(textLines.size() + 2) * spacing };
+
+    _screen->DrawBackgroundRectangle(uIBackgroundRect);
+
     for (const auto& line : textLines) {
-        _screen->DrawText(line, rect, true);
-        rect.y += 60;
+        _screen->DrawText(line, textRect, true);
+        textRect.y += spacing;
     }
 }
 
@@ -145,7 +155,10 @@ void GameWorld::Update(uint64_t deltaTimeMs)
 
         double rawProgress = _animationState->AnimationTimePassed / _animationState->AnimationDuration;
 
-        if (rawProgress > 1.0) {
+        if (_animationState->EffectToPlay) {
+            _audioPlayer->PlaySoundEffect(*_animationState->EffectToPlay);
+            _animationState->EffectToPlay.reset();
+        } else if (rawProgress > 1.0) {
             auto completion = std::move(_animationState->Completion);
 
             for (auto& column : _gameBoard) {
@@ -437,6 +450,7 @@ void GameWorld::DestroyCellsAnimated(std::vector<Vec2>&& cellsToDestroy, double 
     _animationState->AnimationDuration = CellDestroyAnimationDurationMs;
     _animationState->Completion = std::move(completion);
     _animationState->FinalCellState = Cell::CellState::Destroyed;
+    _animationState->EffectToPlay = AudioPlayer::SoundEffect::TileDisappear;
 }
 
 void GameWorld::MoveDownCells()

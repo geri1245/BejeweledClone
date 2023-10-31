@@ -36,23 +36,43 @@ std::vector<std::string> ClassicGameState::GetUIText()
     return {
         "Current score:",
         std::to_string(_score),
+        "Goal: ",
+        std::to_string(ScoreToReach),
+        "Time passed: ",
+        ToStringWith2FractionalDigits(_timePassedMs),
     };
 }
 
 std::vector<std::string> ClassicGameState::GetResult()
 {
-    return { std::string("Your final score: ") + std::to_string(_score) };
+    return { std::string("You reached: ") + std::to_string(ScoreToReach) + " points in " + ToStringWith2FractionalDigits(_timePassedMs) + " seconds!" };
 }
 
-bool QuickDeathGameState::IsGameOver()
+int ClassicGameState::GetScore() const
+{
+    return int(_timePassedMs);
+}
+
+GameMode ClassicGameState::GetGameMode() const
+{
+    return GameMode::Classic;
+}
+
+bool ClassicGameState::IsGameOver() const
+{
+    return _score >= ScoreToReach;
+}
+
+bool QuickDeathGameState::IsGameOver() const
 {
     return _timeLeft <= 0;
 }
 
 void QuickDeathGameState::Update(int deltaTime)
 {
+    IGameState::Update(deltaTime);
+
     _timeLeft -= deltaTime;
-    _timeSurvived += deltaTime;
 }
 
 void QuickDeathGameState::UpdateScore(const CellDestructionData& data)
@@ -66,6 +86,7 @@ void QuickDeathGameState::UpdateScore(const CellDestructionData& data)
 std::vector<std::string> QuickDeathGameState::GetUIText()
 {
     return {
+        "Survive as long as you can!",
         "Time left",
         ToStringWith2FractionalDigits(_timeLeft),
     };
@@ -73,5 +94,20 @@ std::vector<std::string> QuickDeathGameState::GetUIText()
 
 std::vector<std::string> QuickDeathGameState::GetResult()
 {
-    return { std::string("You have survived for ") + ToStringWith2FractionalDigits(_timeSurvived) + "seconds!" };
+    return { std::string("You have survived for ") + ToStringWith2FractionalDigits(_timePassedMs) + " seconds!" };
+}
+
+int QuickDeathGameState::GetScore() const
+{
+    return int(_timePassedMs);
+}
+
+GameMode QuickDeathGameState::GetGameMode() const
+{
+    return GameMode::QuickDeath;
+}
+
+void IGameState::Update(int deltaTime)
+{
+    _timePassedMs += deltaTime;
 }

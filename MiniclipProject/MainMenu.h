@@ -23,6 +23,7 @@ public:
     void Draw();
     void Activate(bool needsResumeButton, const std::vector<std::string>& additionalText);
     void Deactivate();
+    void ShowLeaderboard(const std::vector<int>& classicHighScores, const std::vector<int>& quickDeathHighScores);
 
     Event<std::function<void(ButtonType clickedButton)>> ButtonClicked;
 
@@ -31,6 +32,8 @@ private:
     static constexpr int ButtonWidth = 280;
     static constexpr int TextBlockWidth = 460;
     static constexpr int ButtonSpacing = 20;
+    static constexpr int LeaderboardEntryHeight = 25;
+    static constexpr int LeaderboardSpacing = 5;
 
     struct Button {
         ButtonType Type;
@@ -47,7 +50,10 @@ private:
     InputProcessor* _inputProcessor;
     std::unique_ptr<EventToken> _userClickedEventToken;
     std::vector<Button> _buttons;
+    std::vector<Button> _leaderboardButtons;
     std::vector<TextBlock> _additionalText;
+    std::vector<TextBlock> _leaderboard;
+    SDL_Rect _leaderboardBackground;
 
     std::vector<ButtonType> _buttonTypes;
 
@@ -55,8 +61,13 @@ private:
     std::unique_ptr<EventToken> _mouseMovedEventToken;
     std::optional<ButtonType> _hoveredButton;
 
+    bool _isShowingLeaderboard = false;
+
     void MakeMenuFromButtonTypes();
-    void MakeTextBlocksFromTexts(const std::vector<std::string>& additionalText);
+    int MakeTextBlocksFromTexts(const std::vector<std::string>& additionalText, std::vector<TextBlock>& resultTexts, int startingYPosition, int spacing, int height);
+    int MakeTextBlocksFromMilliseconds(const std::vector<int>& data, std::vector<TextBlock>& resultTexts, int startingYPosition, int spacing);
     void TryClick(Vec2 position);
     void TryHover(Vec2 position);
+    void GoBackFromLeaderboard();
+    const std::vector<Button>& CurrentButtons() const;
 };

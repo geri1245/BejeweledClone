@@ -3,25 +3,38 @@
 #include "GameState.h"
 #include "InputProcessor.h"
 
+#include <filesystem>
+#include <fstream>
 #include <iostream>
 
 Game::Game()
     : _screen(Screen::GetScreen())
     , _inputProcessor(std::make_unique<InputProcessor>())
+    , _highScore(std::make_unique<HighScore>())
 {
     if (!_screen) {
         std::cerr << "Failed to initialize screen. Terminating..." << std::endl;
         std::terminate();
     }
 
-    _gameWorld = std::make_unique<GameWorld>(8, 8, 5, *_screen);
+    _audioPlayer = std::make_unique<AudioPlayer>();
+    _gameWorld = std::make_unique<GameWorld>(8, 8, 5, *_screen, *_audioPlayer);
     _menu = std::make_unique<MainMenu>(*_screen, *_inputProcessor);
     _player = std::make_unique<Player>(*_inputProcessor, *_gameWorld);
+
+    // This is not strictly necessary, the game can be played without sound as well, so we don't terminate here
+    if (!_audioPlayer->Initialize()) {
+        std::cerr << "Failed to initialize SDL Mixer" << std::endl;
+    }
 
     _keyPressedToken = _inputProcessor->KeyPressed.Subscribe([this](Key key) { HandleKeyPress(key); });
     _mouseClickedToken = _menu->ButtonClicked.Subscribe([this](ButtonType button) { HandleButtonClicked(button); });
 
+    _highScore->ReadHighScore();
+
     _menu->Activate(false, {});
+
+    TryParseHighScore();
 }
 
 void Game::RunMainLoop()
@@ -34,6 +47,9 @@ void Game::RunMainLoop()
 
         ProcessEvents();
 
+        // Update it here, so we have background music in the main menu as well
+        _audioPlayer->Update();
+
         _screen->BeginFrame();
 
         switch (_gameState) {
@@ -44,6 +60,7 @@ void Game::RunMainLoop()
             _gameWorld->Update(delta);
 
             if (_gameStateObject->IsGameOver()) {
+                _highScore->AddScore(_gameStateObject->GetGameMode(), _gameStateObject->GetScore());
                 auto result = _gameStateObject->GetResult();
                 _gameStateObject.reset();
                 EndGame(false, result);
@@ -61,6 +78,12 @@ void Game::RunMainLoop()
 
         previous = now;
     }
+
+    _highScore->WriteHighScore();
+}
+
+void Game::TryParseHighScore()
+{
 }
 
 void Game::ProcessEvents()
@@ -98,21 +121,23 @@ void Game::HandleKeyPress(Key key)
 void Game::HandleButtonClicked(ButtonType button)
 {
     switch (button) {
-    case ButtonType::Resume:
+    case ButtonType::Resume: {
         ToggleIsPlaying();
-        break;
-    case ButtonType::Quit:
+    } break;
+    case ButtonType::Quit: {
         _shouldQuit = true;
-        break;
+    } break;
     case ButtonType::Classic: {
         ResumeOrStartGame(GameMode::Classic);
     } break;
     case ButtonType::QuickDeath: {
         ResumeOrStartGame(GameMode::QuickDeath);
     } break;
+    case ButtonType::Leaderboard: {
+        _menu->ShowLeaderboard(_highScore->GetClassicScores(), _highScore->GetQuickDeathScores());
+    } break;
     }
 }
-
 void Game::ToggleIsPlaying()
 {
     switch (_gameState) {

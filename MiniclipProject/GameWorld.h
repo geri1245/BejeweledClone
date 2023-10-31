@@ -1,5 +1,6 @@
 #pragma once
 
+#include "AudioPlayer.h"
 #include "Event.h"
 #include "GameState.h"
 #include "Screen.h"
@@ -43,7 +44,7 @@ public:
 
     Event<std::function<void(Vec2 source)>> TileDragCompleted;
 
-    GameWorld(int rowCount, int colCount, int tileKindCount, Screen& screen);
+    GameWorld(int rowCount, int colCount, int tileKindCount, Screen& screen, AudioPlayer& audioPlayer);
 
     void Activate(IGameState& gameState);
     void Deactivate();
@@ -84,6 +85,7 @@ private:
         double AnimationProgress = 0.0;
         Cell::CellState FinalCellState = Cell::CellState::Normal;
         EasingFunction EasingFun = EasingFunction::EaseInCubic;
+        std::optional<AudioPlayer::SoundEffect> EffectToPlay;
     };
 
     struct ActiveCellState {
@@ -130,4 +132,5 @@ private:
     std::optional<AnimationState> _animationState;
     std::optional<ActiveCellState> _activeCellState;
     IGameState* _gameState;
+    AudioPlayer* _audioPlayer;
 };

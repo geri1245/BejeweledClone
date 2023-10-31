@@ -53,9 +53,9 @@ bool Screen::Initialize()
         TerminateWithMessage(std::string("SDL TTF could not be initialized:") + TTF_GetError());
     }
 
-    _boldFont = TTF_OpenFont("Assets/OpenSans-bold.ttf", 24);
-    _regularFont = TTF_OpenFont("Assets/OpenSans.ttf", 24);
-    if (!_boldFont || !_regularFont) {
+    _bigFont = TTF_OpenFont("Assets/OpenSans-bold.ttf", 24);
+    _smallFont = TTF_OpenFont("Assets/OpenSans-bold.ttf", 14);
+    if (!_bigFont || !_smallFont) {
         TerminateWithMessage(std::string("Some fonts couldn't be loaded: ") + TTF_GetError());
     }
 
@@ -109,8 +109,8 @@ Screen::~Screen()
     SDL_DestroyWindow(_window);
     SDL_Quit();
 
-    TTF_CloseFont(_regularFont);
-    TTF_CloseFont(_boldFont);
+    TTF_CloseFont(_smallFont);
+    TTF_CloseFont(_bigFont);
 }
 
 void Screen::BeginFrame() const
@@ -142,9 +142,9 @@ void Screen::Present() const
     SDL_RenderPresent(_renderer);
 }
 
-void Screen::DrawText(const std::string& text, const SDL_Rect& textRect, bool isBold, SDL_Color color) const
+void Screen::DrawText(const std::string& text, const SDL_Rect& textRect, bool useLargeFont, SDL_Color color) const
 {
-    TTF_Font* font = isBold ? _boldFont : _regularFont;
+    TTF_Font* font = useLargeFont ? _bigFont : _smallFont;
     SDL_Surface* textSurface = TTF_RenderText_Solid(font, text.c_str(), color);
     if (!textSurface) {
         std::cerr << "Something went wrong: " << TTF_GetError() << std::endl;
@@ -169,6 +169,16 @@ void Screen::DrawText(const std::string& text, const SDL_Rect& textRect, bool is
 
     SDL_RenderCopy(_renderer, textTexture, nullptr, &actualRect);
     SDL_DestroyTexture(textTexture);
+}
+
+void Screen::DrawBackgroundRectangle(const SDL_Rect& rect, SDL_Color color) const
+{
+    SDL_SetRenderDrawBlendMode(_renderer, SDL_BLENDMODE_BLEND);
+
+    SDL_SetRenderDrawColor(_renderer, color.r, color.g, color.b, color.a);
+    SDL_RenderFillRect(_renderer, &rect);
+
+    SDL_SetRenderDrawBlendMode(_renderer, SDL_BLENDMODE_NONE);
 }
 
 void Screen::DrawButton(const std::string& text, const SDL_Rect& coords, bool isHovered) const

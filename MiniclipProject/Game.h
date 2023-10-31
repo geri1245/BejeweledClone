@@ -1,6 +1,9 @@
 #pragma once
 
+#include "AudioPlayer.h"
+#include "GameMode.h"
 #include "GameWorld.h"
+#include "HighScore.h"
 #include "MainMenu.h"
 #include "Player.h"
 #include "Screen.h"
@@ -17,11 +20,6 @@ private:
         Playing,
     };
 
-    enum class GameMode {
-        Classic,
-        QuickDeath,
-    };
-
     static constexpr int DesiredFPS = 60;
     static constexpr int FrameTime = int(1000.f / DesiredFPS);
 
@@ -30,6 +28,8 @@ private:
     std::unique_ptr<GameWorld> _gameWorld;
     std::unique_ptr<MainMenu> _menu;
     std::unique_ptr<Player> _player;
+    std::unique_ptr<HighScore> _highScore;
+    std::unique_ptr<AudioPlayer> _audioPlayer;
 
     bool _shouldQuit = false;
     GameState _gameState = GameState::Paused;
@@ -38,6 +38,7 @@ private:
     std::unique_ptr<EventToken> _mouseClickedToken;
     std::unique_ptr<IGameState> _gameStateObject;
 
+    void TryParseHighScore();
     void ProcessEvents();
     void HandleKeyPress(Key key);
     void HandleButtonClicked(ButtonType button);
