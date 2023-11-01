@@ -49,7 +49,8 @@ MainMenu::MainMenu(const Screen& screen, InputProcessor& inputProcessor)
 {
     MakeMenuFromButtonTypes();
     _leaderboardButtons = std::vector<Button> {
-        Button { ButtonType::Back, GetTextForButtonType(ButtonType::Back), SDL_Rect { GetCenteredPositionOfElement(screen.ScreenWidth, ButtonWidth), screen.ScreenHeight - 80, ButtonWidth, ButtonHeight } }
+        GetMusicButton(),
+        Button { ButtonType::Back, GetTextForButtonType(ButtonType::Back), SDL_Rect { GetCenteredPositionOfElement(screen.ScreenWidth, ButtonWidth), screen.ScreenHeight - 80, ButtonWidth, ButtonHeight } },
     };
 }
 
@@ -124,9 +125,27 @@ void MainMenu::GoBackFromLeaderboard()
     _isShowingLeaderboard = false;
 }
 
-const std::vector<MainMenu::Button>& MainMenu::CurrentButtons() const
+std::vector<MainMenu::Button>& MainMenu::CurrentButtons()
 {
     return _isShowingLeaderboard ? _leaderboardButtons : _buttons;
+}
+
+MainMenu::Button MainMenu::GetMusicButton() const
+{
+    return Button {
+        ButtonType::ToggleMusic,
+        _isPlayingMusic ? "Music is ON" : "Music is OFF",
+        SDL_Rect { _screen->ScreenWidth - ButtonWidth - 20, _screen->ScreenHeight - ButtonHeight - 10, ButtonWidth, ButtonHeight }
+    };
+}
+
+void MainMenu::UpdateMusicButton()
+{
+    auto& currentButtons = CurrentButtons();
+    auto musicButtonIt = std::find_if(currentButtons.begin(), currentButtons.end(), [](const Button& button) { return button.Type == ButtonType::ToggleMusic; });
+    if (musicButtonIt != currentButtons.end()) {
+        *musicButtonIt = GetMusicButton();
+    }
 }
 
 void MainMenu::MakeMenuFromButtonTypes()
@@ -142,6 +161,8 @@ void MainMenu::MakeMenuFromButtonTypes()
 
     _buttons.reserve(numOfButtons);
     _buttons.clear();
+
+    _buttons.push_back(GetMusicButton());
 
     for (auto buttonType : _buttonTypes) {
         _buttons.push_back(Button {
@@ -179,12 +200,15 @@ void MainMenu::TryClick(Vec2 position)
 {
     for (const auto& button : CurrentButtons()) {
         if (Contains(button.Position, position)) {
+            // Handle some buttons' action here before forwarding it to the subscribers
             if (button.Type == ButtonType::Back) {
-                // Handle the back button here. Forward everything else
                 GoBackFromLeaderboard();
-            } else {
-                ButtonClicked.Invoke(button.Type);
+            } else if (button.Type == ButtonType::ToggleMusic) {
+                _isPlayingMusic = !_isPlayingMusic;
+                UpdateMusicButton();
             }
+
+            ButtonClicked.Invoke(button.Type);
         }
     }
 }

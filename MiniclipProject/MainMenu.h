@@ -14,6 +14,7 @@ enum class ButtonType {
     Classic,
     Leaderboard,
     QuickDeath,
+    ToggleMusic,
 };
 
 class MainMenu {
@@ -51,6 +52,7 @@ private:
     std::unique_ptr<EventToken> _userClickedEventToken;
     std::vector<Button> _buttons;
     std::vector<Button> _leaderboardButtons;
+
     std::vector<TextBlock> _additionalText;
     std::vector<TextBlock> _leaderboard;
     SDL_Rect _leaderboardBackground;
@@ -62,6 +64,7 @@ private:
     std::optional<ButtonType> _hoveredButton;
 
     bool _isShowingLeaderboard = false;
+    bool _isPlayingMusic = true;
 
     void MakeMenuFromButtonTypes();
     int MakeTextBlocksFromTexts(const std::vector<std::string>& additionalText, std::vector<TextBlock>& resultTexts, int startingYPosition, int spacing, int height);
@@ -69,5 +72,8 @@ private:
     void TryClick(Vec2 position);
     void TryHover(Vec2 position);
     void GoBackFromLeaderboard();
-    const std::vector<Button>& CurrentButtons() const;
+    std::vector<Button>& CurrentButtons();
+    Button GetMusicButton() const;
+
+    void UpdateMusicButton();
 };

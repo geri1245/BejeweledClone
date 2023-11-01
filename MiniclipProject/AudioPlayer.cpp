@@ -58,9 +58,18 @@ bool AudioPlayer::Initialize()
     return true;
 }
 
+void AudioPlayer::ToggleIsMusicEnabled()
+{
+    _isMusicEnabled = !_isMusicEnabled;
+
+    if (!_isMusicEnabled) {
+        Mix_HaltMusic();
+    }
+}
+
 void AudioPlayer::Update()
 {
-    if (!_isInitialized)
+    if (!_isInitialized || !_isMusicEnabled)
         return;
 
     if (Mix_PlayingMusic() == 0) {

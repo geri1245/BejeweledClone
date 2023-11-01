@@ -33,8 +33,6 @@ Game::Game()
     _highScore->ReadHighScore();
 
     _menu->Activate(false, {});
-
-    TryParseHighScore();
 }
 
 void Game::RunMainLoop()
@@ -61,6 +59,8 @@ void Game::RunMainLoop()
 
             if (_gameStateObject->IsGameOver()) {
                 _highScore->AddScore(_gameStateObject->GetGameMode(), _gameStateObject->GetScore());
+                _highScore->WriteHighScore();
+
                 auto result = _gameStateObject->GetResult();
                 _gameStateObject.reset();
                 EndGame(false, result);
@@ -80,10 +80,6 @@ void Game::RunMainLoop()
     }
 
     _highScore->WriteHighScore();
-}
-
-void Game::TryParseHighScore()
-{
 }
 
 void Game::ProcessEvents()
@@ -135,6 +131,9 @@ void Game::HandleButtonClicked(ButtonType button)
     } break;
     case ButtonType::Leaderboard: {
         _menu->ShowLeaderboard(_highScore->GetClassicScores(), _highScore->GetQuickDeathScores());
+    } break;
+    case ButtonType::ToggleMusic: {
+        _audioPlayer->ToggleIsMusicEnabled();
     } break;
     }
 }

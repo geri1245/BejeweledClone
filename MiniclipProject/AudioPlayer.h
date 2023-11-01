@@ -14,6 +14,7 @@ public:
     ~AudioPlayer();
 
     bool Initialize();
+    void ToggleIsMusicEnabled();
     void Update();
 
     void PlaySoundEffect(SoundEffect effect);
@@ -32,4 +33,5 @@ private:
     void LoadSoundEffects();
 
     bool _isInitialized = false;
+    bool _isMusicEnabled = true;
 };

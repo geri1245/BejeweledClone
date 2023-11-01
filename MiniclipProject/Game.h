@@ -38,7 +38,6 @@ private:
     std::unique_ptr<EventToken> _mouseClickedToken;
     std::unique_ptr<IGameState> _gameStateObject;
 
-    void TryParseHighScore();
     void ProcessEvents();
     void HandleKeyPress(Key key);
     void HandleButtonClicked(ButtonType button);
