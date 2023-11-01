@@ -35,7 +35,7 @@ public:
     virtual bool IsGameOver() const override;
 
 private:
-    static constexpr int ScoreToReach = 5000;
+    static constexpr int ScoreToReach = 3000;
     int _score;
 };
 

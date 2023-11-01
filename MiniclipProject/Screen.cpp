@@ -53,7 +53,7 @@ bool Screen::Initialize()
         TerminateWithMessage(std::string("SDL TTF could not be initialized:") + TTF_GetError());
     }
 
-    _bigFont = TTF_OpenFont("Assets/OpenSans-bold.ttf", 24);
+    _bigFont = TTF_OpenFont("Assets/OpenSans-bold.ttf", 20);
     _smallFont = TTF_OpenFont("Assets/OpenSans-bold.ttf", 14);
     if (!_bigFont || !_smallFont) {
         TerminateWithMessage(std::string("Some fonts couldn't be loaded: ") + TTF_GetError());
